@@ -43,6 +43,7 @@ const Renderer = {
         this.renderBuildings(state);
         this.renderResources(state);
         this.renderItems(state);
+        this.renderProjectiles(state);
         this.renderNPCs(state);
         this.renderPlayer(state.player);
         this.renderParticles(state);
@@ -149,6 +150,84 @@ const Renderer = {
             this.ctx.shadowBlur = 10 * (Math.sin(state.time * 0.005) * 0.3 + 0.7);
             Graphics.drawItem(screen.x, screen.y, item, this.camera.zoom);
             this.ctx.shadowBlur = 0;
+        });
+    },
+    
+    renderProjectiles(state) {
+        state.projectiles.forEach(proj => {
+            const screen = this.worldToScreen(proj.x, proj.y);
+            const ctx = this.ctx;
+            ctx.save();
+            
+            // 根据功法类型渲染不同特效
+            switch(proj.effect) {
+                case 'lightning':
+                case 'storm':
+                case 'chain':
+                case 'ultimate_lightning':
+                    // 雷电特效
+                    ctx.strokeStyle = proj.color;
+                    ctx.lineWidth = 3 * this.camera.zoom;
+                    ctx.shadowColor = '#88aaff';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.moveTo(screen.x, screen.y);
+                    for (let i = 0; i < 4; i++) {
+                        const ox = (Math.random() - 0.5) * 20 * this.camera.zoom;
+                        const oy = (Math.random() - 0.5) * 20 * this.camera.zoom;
+                        ctx.lineTo(screen.x + ox, screen.y + oy);
+                    }
+                    ctx.stroke();
+                    break;
+                    
+                case 'blade':
+                case 'pierce':
+                case 'blade_rain':
+                case 'blade_dance':
+                    // 剑气特效
+                    ctx.fillStyle = proj.color;
+                    ctx.shadowColor = '#ffdd44';
+                    ctx.shadowBlur = 10;
+                    const angle = Math.atan2(proj.vy, proj.vx);
+                    ctx.translate(screen.x, screen.y);
+                    ctx.rotate(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(proj.size * this.camera.zoom, 0);
+                    ctx.lineTo(-proj.size * this.camera.zoom, -8 * this.camera.zoom);
+                    ctx.lineTo(-proj.size * this.camera.zoom * 0.5, 0);
+                    ctx.lineTo(-proj.size * this.camera.zoom, 8 * this.camera.zoom);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                    
+                case 'wave':
+                case 'resonance':
+                    // 音波特效
+                    ctx.strokeStyle = proj.color;
+                    ctx.lineWidth = 2 * this.camera.zoom;
+                    ctx.shadowColor = '#ffaaff';
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.arc(screen.x, screen.y, proj.size * this.camera.zoom * 1.5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(screen.x, screen.y, proj.size * this.camera.zoom * 0.8, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
+                    
+                default:
+                    // 默认能量弹
+                    const gradient = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, proj.size * this.camera.zoom * 2);
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(0.3, proj.color);
+                    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(screen.x, screen.y, proj.size * this.camera.zoom * 2, 0, Math.PI * 2);
+                    ctx.fill();
+            }
+            
+            ctx.restore();
         });
     },
     

@@ -295,6 +295,68 @@
             margin-top: 10px;
             font-size: 12px;
         }
+        
+        /* 快捷栏 */
+        #quickBar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: rgba(20, 20, 40, 0.9);
+            border: 2px solid #5a5a9a;
+            border-radius: 10px;
+            padding: 10px 15px;
+        }
+        .quick-slot {
+            width: 50px;
+            height: 50px;
+            background: #2a2a4a;
+            border: 2px solid #4a4a6a;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .quick-slot:hover {
+            border-color: #7a7aba;
+            background: #3a3a6a;
+        }
+        .quick-slot.active {
+            border-color: #aaffaa;
+            box-shadow: 0 0 10px rgba(170, 255, 170, 0.5);
+        }
+        .quick-slot .key-hint {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 10px;
+            color: #888;
+            font-weight: bold;
+        }
+        .quick-slot .technique-icon {
+            font-size: 24px;
+        }
+        .quick-slot .cooldown-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            height: 0%;
+            transition: height 0.1s;
+        }
+        .quick-slot .mana-cost {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 9px;
+            color: #88aaff;
+        }
     </style>
 </head>
 <body>
@@ -386,6 +448,28 @@
         <div id="minimap">
             <canvas id="minimapCanvas"></canvas>
         </div>
+        
+        <!-- 快捷栏 -->
+        <div id="quickBar">
+            <div class="quick-slot" id="quickSlot1" onclick="QuickBarSystem.use(0)">
+                <span class="key-hint">1</span>
+                <span class="technique-icon" id="quickIcon1">-</span>
+                <div class="cooldown-overlay" id="quickCD1"></div>
+                <span class="mana-cost" id="quickMana1"></span>
+            </div>
+            <div class="quick-slot" id="quickSlot2" onclick="QuickBarSystem.use(1)">
+                <span class="key-hint">2</span>
+                <span class="technique-icon" id="quickIcon2">-</span>
+                <div class="cooldown-overlay" id="quickCD2"></div>
+                <span class="mana-cost" id="quickMana2"></span>
+            </div>
+            <div class="quick-slot" id="quickSlot3" onclick="QuickBarSystem.use(2)">
+                <span class="key-hint">3</span>
+                <span class="technique-icon" id="quickIcon3">-</span>
+                <div class="cooldown-overlay" id="quickCD3"></div>
+                <span class="mana-cost" id="quickMana3"></span>
+            </div>
+        </div>
     </div>
     
     <!-- 核心引擎模块 -->
@@ -398,6 +482,7 @@
     <script src="js/systems/resource.js"></script>
     <script src="js/systems/combat.js"></script>
     <script src="js/systems/faction.js"></script>
+    <script src="js/systems/technique.js"></script>
     <script src="js/systems/weather.js"></script>
     <script src="js/systems/dialog.js"></script>
     <script src="js/systems/cultivation.js"></script>
@@ -438,6 +523,7 @@
                 CraftingSystem.init();
                 SocialSystem.init();
                 SurvivalSystem.init();
+                QuickBarSystem.init();
                 
                 // 绑定输入
                 this.bindInput();
@@ -490,6 +576,7 @@
                 CraftingSystem.update(dt);
                 SocialSystem.update(dt);
                 SurvivalSystem.update(dt);
+                QuickBarSystem.update(dt);
                 
                 // 更新UI
                 this.updateUI();
@@ -600,6 +687,15 @@
                             break;
                         case 'escape':
                             GameActions.closeAllPanels();
+                            break;
+                        case '1':
+                            QuickBarSystem.use(0);
+                            break;
+                        case '2':
+                            QuickBarSystem.use(1);
+                            break;
+                        case '3':
+                            QuickBarSystem.use(2);
                             break;
                     }
                 });

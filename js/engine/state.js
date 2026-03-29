@@ -5,7 +5,7 @@
 
 const GameState = {
     time: 0, gameTime: 0, dayTime: 0, day: 1,
-    player: null, npcs: [], buildings: [], resources: [], droppedItems: [], particles: [], decorations: [], spiritualAreas: [],
+    player: null, npcs: [], buildings: [], resources: [], droppedItems: [], particles: [], projectiles: [], decorations: [], spiritualAreas: [],
     mouseX: 0, mouseY: 0,
     
     init() {
@@ -111,7 +111,7 @@ const GameState = {
     update(dt) {
         this.time += dt * 1000; this.gameTime += dt; this.dayTime = (this.dayTime + dt * 10) % 86400;
         if (this.dayTime < dt * 10) this.day++;
-        this.updatePlayer(dt); this.updateNPCs(dt); this.updateParticles(dt); this.updateDroppedItems(dt);
+        this.updatePlayer(dt); this.updateNPCs(dt); this.updateParticles(dt); this.updateDroppedItems(dt); this.updateProjectiles(dt);
     },
     
     updatePlayer(dt) {
@@ -173,6 +173,26 @@ const GameState = {
     
     updateParticles(dt) { this.particles = this.particles.filter(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.5; return p.life > 0; }); },
     updateDroppedItems(dt) { this.droppedItems.forEach(item => item.lifetime -= dt); this.droppedItems = this.droppedItems.filter(item => item.lifetime > 0); },
+    updateProjectiles(dt) {
+        this.projectiles = this.projectiles.filter(proj => {
+            proj.x += proj.vx; proj.y += proj.vy;
+            proj.traveled += Math.hypot(proj.vx, proj.vy);
+            // 检查碰撞
+            for (const npc of this.npcs) {
+                if (npc === proj.owner) continue;
+                const dist = Math.hypot(npc.x - proj.x, npc.y - proj.y);
+                if (dist < npc.size + proj.size) {
+                    const dmg = CombatSystem.calculateDamage(proj.owner.attack * proj.power, npc.defense);
+                    CombatSystem.dealDamage(npc, dmg, proj.owner);
+                    GameState.addParticle(npc.x, npc.y, proj.color, 12);
+                    CombatSystem.showDamage(npc.x, npc.y - 30, dmg, proj.color);
+                    return false; // 命中后消失
+                }
+            }
+            // 超出范围消失
+            return proj.traveled < proj.range;
+        });
+    },
     
     addItem(entity, item) {
         const existing = entity.inventory.find(i => i && i.id === item.id);
@@ -206,11 +226,40 @@ const GameData = {
         { name: '金丹后期', minCultivation: 15000, bonus: 6 }, { name: '元婴初期', minCultivation: 30000, bonus: 8 }
     ],
     techniques: [
-        { id: 'basic_meditation', name: '基础吐纳术', type: 'basic', power: 1, description: '最基础的修炼功法' },
-        { id: 'cloud_steps', name: '云步', type: 'movement', power: 1.5, description: '轻功，提升移动速度' },
-        { id: 'thunder_strike', name: '雷击术', type: 'combat', power: 2, description: '释放雷电攻击敌人' },
-        { id: 'healing_art', name: '回春术', type: 'healing', power: 1.5, description: '恢复生命值' },
-        { id: 'spirit_gathering', name: '聚灵诀', type: 'cultivation', power: 2, description: '加速灵力吸收' }
+        // 基础功法
+        { id: 'basic_meditation', name: '基础吐纳术', type: 'basic', power: 1, description: '最基础的修炼功法', icon: '🧘' },
+        { id: 'cloud_steps', name: '云步', type: 'movement', power: 1.5, description: '轻功，提升移动速度', icon: '☁️' },
+        // 青云门功法 - 雷系
+        { id: 'qingyun_thunder', name: '青云雷法', type: 'combat', power: 2, manaCost: 20, range: 200, speed: 8, color: '#88aaff', faction: '青云门', description: '释放雷电攻击前方敌人', icon: '⚡', effect: 'lightning' },
+        { id: 'qingyun_storm', name: '雷暴术', type: 'combat', power: 3, manaCost: 35, range: 250, speed: 10, color: '#6688ff', faction: '青云门', description: '召唤雷暴范围攻击', icon: '🌩️', effect: 'storm', unlockContribution: 100 },
+        { id: 'qingyun_shield', name: '雷光护盾', type: 'defense', power: 2, manaCost: 25, duration: 5, faction: '青云门', description: '召唤雷电护盾抵挡伤害', icon: '🛡️', effect: 'shield', unlockContribution: 200 },
+        { id: 'qingyun_chain', name: '连锁闪电', type: 'combat', power: 2.5, manaCost: 40, range: 180, chains: 3, color: '#aaccff', faction: '青云门', description: '闪电链弹射多个目标', icon: '⚡', effect: 'chain', unlockContribution: 350 },
+        { id: 'qingyun_teleport', name: '雷遁术', type: 'movement', power: 2, manaCost: 30, range: 300, faction: '青云门', description: '瞬间瞬移到鼠标位置', icon: '💨', effect: 'teleport', unlockContribution: 500 },
+        { id: 'qingyun_ultimate', name: '天雷寂灭', type: 'combat', power: 5, manaCost: 80, range: 350, speed: 15, color: '#ffffff', faction: '青云门', description: '最强雷法，毁天灭地', icon: '💥', effect: 'ultimate_lightning', unlockContribution: 800 },
+        // 药王谷功法 - 治疗/毒系
+        { id: 'yaowang_heal', name: '回春术', type: 'healing', power: 2, manaCost: 15, healAmount: 40, color: '#88ff88', faction: '药王谷', description: '恢复自身生命值', icon: '💚', effect: 'heal' },
+        { id: 'yaowang_poison', name: '毒雾术', type: 'combat', power: 1.5, manaCost: 25, range: 150, duration: 5, color: '#aa88aa', faction: '药王谷', description: '释放毒雾持续伤害', icon: '☠️', effect: 'poison', unlockContribution: 100 },
+        { id: 'yaowang_cure', name: '清心咒', type: 'buff', power: 1, manaCost: 20, faction: '药王谷', description: '清除负面状态', icon: '✨', effect: 'purify', unlockContribution: 200 },
+        { id: 'yaowang_pill', name: '丹药专精', type: 'passive', power: 1.5, faction: '药王谷', description: '提升丹药效果50%', icon: '💊', unlockContribution: 350 },
+        { id: 'yaowang_area_heal', name: '群体回春', type: 'healing', power: 1.5, manaCost: 50, range: 200, healAmount: 30, color: '#aaffaa', faction: '药王谷', description: '范围内友方恢复生命', icon: '💖', effect: 'area_heal', unlockContribution: 500 },
+        { id: 'yaowang_immortal', name: '不死金身', type: 'defense', power: 3, manaCost: 60, duration: 8, faction: '药王谷', description: '短时间内免疫死亡', icon: '🌟', effect: 'immortal', unlockContribution: 800 },
+        // 天音宗功法 - 音波/控制
+        { id: 'tianyin_wave', name: '音波功', type: 'combat', power: 1.8, manaCost: 18, range: 220, speed: 6, color: '#ffaaff', faction: '天音宗', description: '释放音波穿透攻击', icon: '🎵', effect: 'wave' },
+        { id: 'tianyin_stun', name: '定魂音', type: 'control', power: 1, manaCost: 30, range: 180, duration: 2, color: '#dd88ff', faction: '天音宗', description: '眩晕敌人2秒', icon: '🔔', effect: 'stun', unlockContribution: 100 },
+        { id: 'tianyin_barrier', name: '音障', type: 'defense', power: 1.5, manaCost: 25, duration: 6, faction: '天音宗', description: '音波屏障吸收伤害', icon: '🛡️', effect: 'sound_barrier', unlockContribution: 200 },
+        { id: 'tianyin_resonance', name: '共鸣术', type: 'combat', power: 2.5, manaCost: 45, range: 200, color: '#ffaadd', faction: '天音宗', description: '音波共振范围伤害', icon: '🎶', effect: 'resonance', unlockContribution: 350 },
+        { id: 'tianyin_mana', name: '天音回灵', type: 'recovery', power: 2, manaCost: 0, manaRecover: 50, faction: '天音宗', description: '恢复法力值', icon: '💠', effect: 'mana_recover', unlockContribution: 500 },
+        { id: 'tianyin_soul', name: '摄魂魔音', type: 'control', power: 3, manaCost: 70, range: 300, duration: 4, color: '#ff88ff', faction: '天音宗', description: '控制敌人4秒', icon: '👻', effect: 'dominate', unlockContribution: 800 },
+        // 万剑宗功法 - 剑气
+        { id: 'wanjian_blade', name: '剑气斩', type: 'combat', power: 2.2, manaCost: 20, range: 250, speed: 12, color: '#ffdd44', faction: '万剑宗', description: '发射剑气攻击', icon: '⚔️', effect: 'blade' },
+        { id: 'wanjian_rain', name: '万剑归宗', type: 'combat', power: 2, manaCost: 40, range: 280, count: 8, color: '#ffcc44', faction: '万剑宗', description: '召唤剑雨范围攻击', icon: '🗡️', effect: 'blade_rain', unlockContribution: 100 },
+        { id: 'wanjian_armor', name: '剑气护体', type: 'defense', power: 1.8, manaCost: 30, duration: 8, faction: '万剑宗', description: '剑气护体反弹伤害', icon: '🔰', effect: 'blade_armor', unlockContribution: 200 },
+        { id: 'wanjian_dance', name: '剑舞', type: 'combat', power: 2.8, manaCost: 55, range: 150, hits: 5, color: '#ffaa44', faction: '万剑宗', description: '剑舞连续攻击', icon: '🌀', effect: 'blade_dance', unlockContribution: 350 },
+        { id: 'wanjian_pierce', name: '破天一剑', type: 'combat', power: 3.5, manaCost: 60, range: 400, speed: 20, color: '#ffffff', faction: '万剑宗', description: '穿透性剑气直线攻击', icon: '➡️', effect: 'pierce', unlockContribution: 500 },
+        { id: 'wanjian_god', name: '剑神降临', type: 'ultimate', power: 6, manaCost: 100, duration: 10, faction: '万剑宗', description: '化身剑神全属性翻倍', icon: '👑', effect: 'god_mode', unlockContribution: 800 },
+        // 通用功法
+        { id: 'healing_art', name: '基础疗伤', type: 'healing', power: 1.5, manaCost: 10, healAmount: 25, color: '#88ff88', description: '恢复少量生命', icon: '💚' },
+        { id: 'spirit_gathering', name: '聚灵诀', type: 'cultivation', power: 2, description: '加速灵力吸收', icon: '🔮' }
     ],
     factions: [
         { id: 'qingyun', name: '青云门', color: '#4a90d9', bonus: { cultivation: 1.2, combat: 1.1 } },
