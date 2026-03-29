@@ -25,7 +25,10 @@ const GameState = {
             inventory: new Array(20).fill(null), inventorySize: 20, gold: 100,
             skills: [], techniques: [], effects: [], isPlayer: true
         };
-        this.player.body = Core.createCircle(this.player.x, this.player.y, this.player.size, { label: 'player', frictionAir: 0.5, friction: 0.3 });
+        this.player.body = Core.createCircle(this.player.x, this.player.y, this.player.size, { 
+            label: 'player', frictionAir: 0.5, friction: 0.1,
+            collisionFilter: { group: -1, category: 0x0001, mask: 0x0002 }
+        });
         Core.addBody(this.player.body);
         this.addItem(this.player, { id: 'herb', name: '灵草', icon: '🌿', type: 'material', count: 5, description: '炼丹材料' });
         this.addItem(this.player, { id: 'raw_meat', name: '生肉', icon: '🍖', type: 'food', count: 3, description: '生肉，直接吃容易生病', isRaw: true });
@@ -87,7 +90,11 @@ const GameState = {
             skills: [], techniques: ['basic_meditation'], effects: [],
             body: null, skinColor: isMonster ? '#8b4513' : (type === 'elder' ? '#d0b090' : '#e0c0a0')
         };
-        entity.body = Core.createCircle(x, y, entity.size, { label: `${isMonster ? 'monster' : 'npc'}_${id}`, frictionAir: 0.8 });
+        entity.body = Core.createCircle(x, y, entity.size, { 
+            label: `${isMonster ? 'monster' : 'npc'}_${id}`, 
+            frictionAir: 0.8, friction: 0.1,
+            collisionFilter: { group: -1, category: 0x0001, mask: 0x0002 }
+        });
         Core.addBody(entity.body);
         return entity;
     },
@@ -125,7 +132,16 @@ const GameState = {
         if (len > 0) { vx /= len; vy /= len; }
         const speed = p.speed * (p.stamina / p.maxStamina * 0.5 + 0.5);
         p.velocityX = vx * speed; p.velocityY = vy * speed;
-        if (p.body) { Core.setVelocity(p.body, { x: p.velocityX, y: p.velocityY }); p.x = p.body.position.x; p.y = p.body.position.y; }
+        if (p.body) {
+            Core.setVelocity(p.body, { x: p.velocityX, y: p.velocityY });
+            // 强制设置位置，避免被其他物理体卡住
+            const targetX = p.x + p.velocityX * dt * 10;
+            const targetY = p.y + p.velocityY * dt * 10;
+            if (len > 0) {
+                Core.setPosition(p.body, { x: targetX, y: targetY });
+            }
+            p.x = p.body.position.x; p.y = p.body.position.y;
+        }
         p.x = Math.max(50, Math.min(2950, p.x)); p.y = Math.max(50, Math.min(1950, p.y));
         if (len > 0) p.stamina = Math.max(0, p.stamina - dt * 2); else p.stamina = Math.min(p.maxStamina, p.stamina + dt * 5);
         const spiritualBonus = SpiritualSystem.getSpiritualLevel(p.x, p.y);
