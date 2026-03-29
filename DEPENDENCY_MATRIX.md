@@ -18,10 +18,10 @@
 | 4 | `js/engine/state.js` | 二级节点 | 215 | 游戏状态管理 |
 | 5 | `js/systems/building.js` | 二级节点 | 251 | 建造系统 |
 | 6 | `js/systems/resource.js` | 二级节点 | 161 | 资源采集 |
-| 7 | `js/systems/combat.js` | 二级节点 | 320 | 战斗系统 |
+| 7 | `js/systems/combat.js` | 二级节点 | 127 | 战斗系统 |
 | 8 | `js/systems/faction.js` | 二级节点 | 279 | 门派系统 |
 | 9 | `js/systems/weather.js` | 二级节点 | 188 | 天气系统 |
-| 10 | `js/systems/dialog.js` | 二级节点 | 286 | NPC对话(已修改) |
+| 10 | `js/systems/dialog.js` | 二级节点 | 169 | NPC对话 |
 | 11 | `js/systems/cultivation.js` | 二级节点 | 249 | 修炼系统 |
 | 12 | `js/systems/crafting.js` | 二级节点 | 286 | 合成系统 |
 | 13 | `js/systems/social.js` | 二级节点 | 251 | NPC社交 |
