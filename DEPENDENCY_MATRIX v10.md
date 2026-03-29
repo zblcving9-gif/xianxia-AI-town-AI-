@@ -1,12 +1,13 @@
-# 修仙AI小镇 - 文件依赖关系矩阵 v12
+# 修仙AI小镇 - 文件依赖关系矩阵 v11
 
 ## 版本信息
-- **版本号**: v12
+- **版本号**: v11
 - **更新日期**: 2024年迭代版本
 - **变更说明**: 
-  - 添加物理碰撞和边界检测
-  - 实现多轮聊天和聊天记录持久化
-  - NPC多功能系统（采集、修炼、休息）
+  - NPC/怪物移动优化，禁用重力
+  - 对话框位置上移，避免重叠
+  - UI透明度改为80%，添加折叠功能
+  - 新增世界信息窗口
 
 ## 项目文件列表
 
@@ -15,13 +16,13 @@
 | 1 | `index.html` | 根节点 | 987 | 主入口文件 |
 | 2 | `js/engine/core.js` | 二级节点 | 246 | 物理引擎核心 |
 | 3 | `js/engine/renderer.js` | 二级节点 | 391 | 渲染系统 |
-| 4 | `js/engine/state.js` | 二级节点 | 327 | 游戏状态管理 |
+| 4 | `js/engine/state.js` | 二级节点 | 307 | 游戏状态管理 |
 | 5 | `js/systems/building.js` | 二级节点 | 251 | 建造系统 |
 | 6 | `js/systems/resource.js` | 二级节点 | 161 | 资源采集 |
 | 7 | `js/systems/combat.js` | 二级节点 | 125 | 战斗系统 |
 | 8 | `js/systems/faction.js` | 二级节点 | 279 | 门派系统 |
 | 9 | `js/systems/weather.js` | 二级节点 | 188 | 天气系统 |
-| 10 | `js/systems/dialog.js` | 二级节点 | 200 | NPC对话 |
+| 10 | `js/systems/dialog.js` | 二级节点 | 169 | NPC对话 |
 | 11 | `js/systems/cultivation.js` | 二级节点 | 249 | 修炼系统 |
 | 12 | `js/systems/crafting.js` | 二级节点 | 286 | 合成系统 |
 | 13 | `js/systems/social.js` | 二级节点 | 251 | NPC社交 |

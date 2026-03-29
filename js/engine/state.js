@@ -26,8 +26,8 @@ const GameState = {
             skills: [], techniques: [], effects: [], isPlayer: true
         };
         this.player.body = Core.createCircle(this.player.x, this.player.y, this.player.size, { 
-            label: 'player', frictionAir: 0.5, friction: 0.1,
-            collisionFilter: { group: -1, category: 0x0001, mask: 0x0002 }
+            label: 'player', frictionAir: 0.1, friction: 0.05, restitution: 0.1,
+            collisionFilter: { category: 0x0001, mask: 0xFFFF }
         });
         Core.addBody(this.player.body);
         this.addItem(this.player, { id: 'herb', name: '灵草', icon: '🌿', type: 'material', count: 5, description: '炼丹材料' });
@@ -83,17 +83,19 @@ const GameState = {
             cultivationLevel: 1, cultivationRealm: '练气一层', cultivationSpeed: 1,
             attack: baseAttack, defense: isMonster ? 8 : 10, attackSpeed: 1, attackRange: 80,
             factionName, faction: factionName ? { name: factionName, color: this.getFactionColor(factionName) } : null,
-            relationship: Math.floor(Math.random() * 201) - 100, // -100到100随机
+            relationship: Math.floor(Math.random() * 201) - 100,
             friendship: 0, dialogHistory: [], isQuestGiver: type === 'elder' || type === 'leader',
-            quests: [], state: 'idle', targetX: x, targetY: y, stateTimer: 0, speed: isMonster ? 2 : 1.5,
+            quests: [], state: 'idle', targetX: x, targetY: y, stateTimer: 0,
+            // NPC功能属性
+            npcAction: null, actionTimer: 0, hasFaction: !!factionName, contribution: 0,
             inventory: new Array(20).fill(null), gold: Math.floor(Math.random() * 50),
             skills: [], techniques: ['basic_meditation'], effects: [],
             body: null, skinColor: isMonster ? '#8b4513' : (type === 'elder' ? '#d0b090' : '#e0c0a0')
         };
         entity.body = Core.createCircle(x, y, entity.size, { 
             label: `${isMonster ? 'monster' : 'npc'}_${id}`, 
-            frictionAir: 0.8, friction: 0.1,
-            collisionFilter: { group: -1, category: 0x0001, mask: 0x0002 }
+            frictionAir: 0.1, friction: 0.05, restitution: 0.1,
+            collisionFilter: { category: 0x0002, mask: 0xFFFF }
         });
         Core.addBody(entity.body);
         return entity;
@@ -123,20 +125,16 @@ const GameState = {
     
     updatePlayer(dt) {
         const p = this.player;
-        // 恒定速度，不受任何因素影响
         const MOVE_SPEED = 8;
         let vx = 0, vy = 0;
         if (p.moveUp) vy -= 1; if (p.moveDown) vy += 1; if (p.moveLeft) vx -= 1; if (p.moveRight) vx += 1;
         const len = Math.hypot(vx, vy);
         if (len > 0) { vx /= len; vy /= len; }
-        // 直接计算新位置，恒定速度
-        const moveX = vx * MOVE_SPEED;
-        const moveY = vy * MOVE_SPEED;
-        p.velocityX = moveX; p.velocityY = moveY;
-        if (p.body && len > 0) {
-            const newX = p.x + moveX;
-            const newY = p.y + moveY;
-            Core.setPosition(p.body, { x: newX, y: newY });
+        // 使用物理速度移动，碰撞会被自动处理
+        p.velocityX = vx * MOVE_SPEED;
+        p.velocityY = vy * MOVE_SPEED;
+        if (p.body) {
+            Core.setVelocity(p.body, { x: p.velocityX, y: p.velocityY });
             p.x = p.body.position.x; p.y = p.body.position.y;
         }
         p.x = Math.max(50, Math.min(2950, p.x)); p.y = Math.max(50, Math.min(1950, p.y));
@@ -150,25 +148,47 @@ const GameState = {
     },
     
     updateNPCs(dt) {
-        const NPC_SPEED = 4; // NPC/怪物恒定速度
+        const NPC_SPEED = 4;
         this.npcs.forEach(npc => {
             if (npc.body) { npc.x = npc.body.position.x; npc.y = npc.body.position.y; }
             npc.mana = Math.min(npc.maxMana || 100, (npc.mana || 100) + dt * 1.5);
             npc.stamina = Math.min(npc.maxStamina || 100, (npc.stamina || 100) + dt * 3);
             if (!npc.isMonster) npc.hunger = Math.max(0, (npc.hunger || 100) - dt * 0.3);
             npc.stateTimer -= dt;
+            // NPC行为系统
+            npc.actionTimer = (npc.actionTimer || 0) - dt;
+            if (npc.actionTimer <= 0 && !npc.isMonster) this.updateNPCBehavior(npc);
             if (npc.stateTimer <= 0) this.updateNPCAI(npc);
             if (npc.state === 'walking' || npc.state === 'chasing') {
                 const dx = npc.targetX - npc.x, dy = npc.targetY - npc.y, dist = Math.hypot(dx, dy);
                 if (dist > 5) {
-                    const moveX = (dx / dist) * NPC_SPEED;
-                    const moveY = (dy / dist) * NPC_SPEED;
-                    if (npc.body) Core.setPosition(npc.body, { x: npc.x + moveX, y: npc.y + moveY });
+                    if (npc.body) Core.setVelocity(npc.body, { x: (dx / dist) * NPC_SPEED, y: (dy / dist) * NPC_SPEED });
                 }
-                else { npc.state = 'idle'; }
+                else { npc.state = 'idle'; if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 }); }
             }
             if (!npc.isMonster) SocialSystem.updateNPCSocial(npc, dt);
         });
+    },
+    
+    updateNPCBehavior(npc) {
+        // NPC随机执行功能
+        const actions = ['gather', 'cultivate', 'rest'];
+        const action = actions[Math.floor(Math.random() * actions.length)];
+        npc.npcAction = action;
+        npc.actionTimer = 30 + Math.random() * 30; // 30-60秒后执行下一个
+        switch(action) {
+            case 'gather':
+                // 寻找附近资源
+                const res = this.resources.find(r => Math.hypot(r.x - npc.x, r.y - npc.y) < 100);
+                if (res) npc.targetX = res.x; npc.targetY = res.y; npc.state = 'walking';
+                break;
+            case 'cultivate':
+                npc.cultivation += Math.random() * 5;
+                break;
+            case 'rest':
+                npc.health = Math.min(npc.maxHealth, npc.health + 10);
+                break;
+        }
     },
     
     updateNPCAI(npc) {

@@ -4,8 +4,22 @@
  */
 
 const DialogSystem = {
-    currentNPC: null, isDialogOpen: false, dialogHistory: [],
+    currentNPC: null, isDialogOpen: false,
     apiKey: localStorage.getItem('qwen_api_key') || '',
+    // 从localStorage加载所有NPC的聊天记录
+    getAllChatHistory() { return JSON.parse(localStorage.getItem('npc_chat_history') || '{}'); },
+    getChatHistory(npcId) { return this.getAllChatHistory()[npcId] || []; },
+    saveChatHistory(npcId, history) {
+        const all = this.getAllChatHistory();
+        all[npcId] = history.slice(-20); // 保留最近20条
+        localStorage.setItem('npc_chat_history', JSON.stringify(all));
+    },
+    addChatMessage(npcId, role, content) {
+        const history = this.getChatHistory(npcId);
+        history.push({ role, content, time: Date.now() });
+        this.saveChatHistory(npcId, history);
+        return history;
+    },
     
     init() {},
     update(dt) {},
@@ -14,12 +28,22 @@ const DialogSystem = {
         this.currentNPC = npc; this.isDialogOpen = true;
         FactionSystem.updateNPCRelation(npc);
         document.getElementById('dialogBox').classList.add('show');
-        this.showOptions(npc);
+        // 显示历史聊天记录
+        this.showChatHistory(npc);
     },
     
-    showOptions(npc) {
+    showChatHistory(npc) {
+        const history = this.getChatHistory(npc.id);
         document.getElementById('dialogSpeaker').textContent = npc.name;
-        document.getElementById('dialogContent').innerHTML = this.getGreeting(npc);
+        let content = this.getGreeting(npc);
+        if (history.length > 0) {
+            content += '<hr style="border-color:#4a4a8a;margin:10px 0;"><p style="font-size:11px;color:#888;">历史对话:</p>';
+            history.slice(-5).forEach(h => {
+                const prefix = h.role === 'user' ? '我' : npc.name;
+                content += `<p style="font-size:12px;"><span style="color:${h.role === 'user' ? '#aaffaa' : '#aaaaff'}">${prefix}:</span> ${h.content.substring(0, 50)}</p>`;
+            });
+        }
+        document.getElementById('dialogContent').innerHTML = content;
         let opt = `<div class="dialog-option" onclick="DialogSystem.ask('greeting')">问候</div>`;
         if (npc.isQuestGiver) opt += `<div class="dialog-option" onclick="DialogSystem.ask('quest')">询问任务</div>`;
         if (npc.type === 'blacksmith') opt += `<div class="dialog-option" onclick="DialogSystem.ask('craft')">打造装备</div>`;
@@ -121,10 +145,15 @@ const DialogSystem = {
     async sendChat() {
         const msg = document.getElementById('chatInput').value.trim();
         if (!msg) return;
+        const npc = this.currentNPC;
+        // 保存用户消息
+        this.addChatMessage(npc.id, 'user', msg);
         document.getElementById('dialogContent').innerHTML = '<p>思考中...</p>';
         const res = await this.callQwenAPI(msg);
-        document.getElementById('dialogContent').innerHTML = `<p>${res}</p>`;
-        this.dialogHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: res });
+        // 保存NPC回复
+        this.addChatMessage(npc.id, 'assistant', res);
+        document.getElementById('dialogContent').innerHTML = `<p><span style="color:#aaffaa">我:</span> ${msg}</p><p><span style="color:#aaaaff">${npc.name}:</span> ${res}</p>`;
+        document.getElementById('dialogOptions').innerHTML = `<div class="dialog-option" onclick="DialogSystem.freeChat()">继续对话</div><div class="dialog-option" onclick="DialogSystem.showChatHistory(DialogSystem.currentNPC)">查看历史</div><div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>`;
     },
     
     showApiSettings() {
@@ -142,9 +171,11 @@ const DialogSystem = {
     async callQwenAPI(message) {
         if (!this.apiKey) return '请先在API设置中配置您的阿里云Qwen API Key。';
         const npc = this.currentNPC;
+        const history = this.getChatHistory(npc.id);
         const messages = [
-            { role: 'system', content: `你是修仙世界NPC，名字${npc.name}，身份${this.getNPCRole(npc.type)}。关系值${npc.relationship}。用修仙语气回复，不超过80字。` },
-            ...this.dialogHistory.slice(-6), { role: 'user', content: message }
+            { role: 'system', content: `你是修仙世界NPC，名字${npc.name}，身份${this.getNPCRole(npc.type)}。关系值${npc.relationship}。用修仙语气回复，不超过80字。记住之前的对话内容。` },
+            ...history.slice(-10).map(h => ({ role: h.role, content: h.content })),
+            { role: 'user', content: message }
         ];
         try {
             const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {

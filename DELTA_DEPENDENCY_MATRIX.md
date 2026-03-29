@@ -1,31 +1,27 @@
-# 文件依赖增量矩阵 - v11
+# 文件依赖增量矩阵 - v12
 
 ## 版本变更说明
 
-本次迭代为 **v10 → v11** 的增量变更
+本次迭代为 **v11 → v12** 的增量变更
 
 ---
 
 ## 修改内容
 
-### 1. NPC/怪物移动优化
-- 使用恒定速度 NPC_SPEED = 4
-- 禁用物理引擎重力
-- 移除体力对速度的影响
+### 1. 物理碰撞和边界
+- 修改碰撞过滤设置，允许实体间碰撞
+- 使用 `setVelocity` 替代 `setPosition` 实现物理碰撞
+- 降低摩擦力和空气阻力
 
-### 2. 对话框位置修复
-- bottom: 20px → 120px
-- 避免与快捷栏重叠
+### 2. 多轮聊天和持久化
+- 聊天记录保存到 localStorage
+- 每个NPC保留最近20条聊天记录
+- 显示历史对话摘要
 
-### 3. UI透明度和折叠功能
-- 所有面板透明度改为80%
-- 添加折叠/展开按钮
-- 支持面板收起
-
-### 4. 世界信息窗口
-- 新增世界日志系统
-- 记录重要事件（排除单次攻击）
-- 最多保留50条记录
+### 3. NPC多功能系统
+- NPC可执行：采集、修炼、休息
+- 添加 `updateNPCBehavior` 行为系统
+- NPC定时执行随机功能
 
 ---
 
@@ -33,38 +29,33 @@
 
 | 文件 | 修改行数 | 修改内容 |
 |------|----------|----------|
-| `index.html` | ~50行 | UI样式、折叠功能、世界日志 |
-| `js/engine/core.js` | ~3行 | 禁用重力 |
-| `js/engine/state.js` | ~15行 | NPC恒定速度 |
+| `js/engine/state.js` | ~30行 | 碰撞过滤、NPC行为系统 |
+| `js/systems/dialog.js` | ~35行 | 多轮聊天、持久化 |
 
 ---
 
 ## 代码变更详情
 
-### core.js - 禁用重力
+### state.js - 碰撞和行为
 ```javascript
-// 禁用重力（俯视角游戏）
-this.engine.world.gravity.y = 0;
-this.engine.world.gravity.x = 0;
-```
+// 碰撞过滤 - 允许碰撞
+collisionFilter: { category: 0x0001, mask: 0xFFFF }
 
-### state.js - NPC恒定速度
-```javascript
-const NPC_SPEED = 4;
-// 直接设置位置，不使用物理速度
-Core.setPosition(npc.body, { x: npc.x + moveX, y: npc.y + moveY });
-```
+// 使用物理速度移动
+Core.setVelocity(p.body, { x: p.velocityX, y: p.velocityY });
 
-### index.html - 折叠功能和世界日志
-```javascript
-function togglePanel(panelId) {
-    panel.classList.toggle('panel-collapsed');
+// NPC行为系统
+updateNPCBehavior(npc) {
+    const actions = ['gather', 'cultivate', 'rest'];
+    // 随机执行功能...
 }
+```
 
-const WorldLogSystem = {
-    logs: [],
-    addLog(message, type) { ... }
-};
+### dialog.js - 持久化聊天
+```javascript
+// 聊天记录持久化
+getAllChatHistory() { return JSON.parse(localStorage.getItem('npc_chat_history') || '{}'); }
+saveChatHistory(npcId, history) { localStorage.setItem('npc_chat_history', JSON.stringify(all)); }
 ```
 
 ---
@@ -73,7 +64,6 @@ const WorldLogSystem = {
 
 | 规则 | 状态 | 说明 |
 |------|------|------|
-| 根节点修改≤50行 | ✅ | index.html ~50行 |
-| 二级节点修改≤100行 | ✅ | core.js 3行, state.js 15行 |
+| 根节点修改≤50行 | ✅ | index.html 未修改 |
+| 二级节点修改≤100行 | ✅ | state.js ~30行, dialog.js ~35行 |
 | 文件行数≤400行 | ✅ | 全部符合 |
-| 根节点≤1000行 | ✅ | index.html 987行 |
