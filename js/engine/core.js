@@ -16,8 +16,9 @@ const Core = {
         this.world = this.engine.world;
         this.runner = Matter.Runner.create();
         
-        // 设置重力（修仙世界，略有不同）
-        this.engine.world.gravity.y = 0.5;
+        // 禁用重力（俯视角游戏）
+        this.engine.world.gravity.y = 0;
+        this.engine.world.gravity.x = 0;
         
         // 创建物理边界
         this.createBoundaries(canvas.width, canvas.height);

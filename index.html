@@ -33,13 +33,31 @@
         
         /* 状态面板 */
         #statusPanel {
-            background: rgba(20, 20, 40, 0.9);
+            background: rgba(20, 20, 40, 0.8);
             border: 1px solid #4a4a8a;
             border-radius: 8px;
             padding: 15px;
             min-width: 200px;
             margin-bottom: 10px;
         }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .panel-toggle {
+            background: #3a3a6a;
+            border: 1px solid #5a5a9a;
+            border-radius: 3px;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 10px;
+            padding: 2px 6px;
+        }
+        .panel-content { transition: max-height 0.3s; overflow: hidden; }
+        .panel-collapsed .panel-content { max-height: 0; }
+        .panel-collapsed { padding: 5px 15px; }
         .stat-row {
             display: flex;
             justify-content: space-between;
@@ -121,16 +139,17 @@
         /* 对话框 */
         #dialogBox {
             position: absolute;
-            bottom: 20px;
+            bottom: 120px;
             left: 50%;
             transform: translateX(-50%);
             width: 80%;
             max-width: 600px;
-            background: rgba(20, 20, 40, 0.95);
+            background: rgba(20, 20, 40, 0.8);
             border: 2px solid #6a6aaa;
             border-radius: 10px;
             padding: 20px;
             display: none;
+            z-index: 200;
         }
         #dialogBox.show { display: block; }
         #dialogSpeaker {
@@ -185,7 +204,7 @@
         
         /* 物品栏 */
         #inventoryPanel {
-            background: rgba(20, 20, 40, 0.9);
+            background: rgba(20, 20, 40, 0.8);
             border: 1px solid #4a4a8a;
             border-radius: 8px;
             padding: 10px;
@@ -224,7 +243,7 @@
         /* 门派面板 */
         #factionPanel {
             display: none;
-            background: rgba(20, 20, 40, 0.95);
+            background: rgba(20, 20, 40, 0.8);
             border: 1px solid #4a4a8a;
             border-radius: 8px;
             padding: 15px;
@@ -240,7 +259,7 @@
         /* 修炼面板 */
         #cultivationPanel {
             display: none;
-            background: rgba(20, 20, 40, 0.95);
+            background: rgba(20, 20, 40, 0.8);
             border: 1px solid #4a4a8a;
             border-radius: 8px;
             padding: 15px;
@@ -256,7 +275,7 @@
         /* 合成面板 */
         #craftingPanel {
             display: none;
-            background: rgba(20, 20, 40, 0.95);
+            background: rgba(20, 20, 40, 0.8);
             border: 1px solid #4a4a8a;
             border-radius: 8px;
             padding: 15px;
@@ -276,7 +295,7 @@
             right: 10px;
             width: 150px;
             height: 150px;
-            background: rgba(20, 20, 40, 0.9);
+            background: rgba(20, 20, 40, 0.8);
             border: 1px solid #4a4a8a;
             border-radius: 8px;
         }
@@ -288,7 +307,7 @@
         
         /* 灵力显示 */
         #spiritualInfo {
-            background: rgba(20, 20, 40, 0.9);
+            background: rgba(20, 20, 40, 0.8);
             border: 1px solid #4a4a8a;
             border-radius: 8px;
             padding: 10px;
@@ -357,6 +376,26 @@
             font-size: 9px;
             color: #88aaff;
         }
+        
+        /* 世界信息窗口 */
+        #worldLogPanel {
+            background: rgba(20, 20, 40, 0.8);
+            border: 1px solid #4a4a8a;
+n            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+        #worldLogPanel .log-entry {
+            padding: 3px 0;
+            border-bottom: 1px solid #2a2a4a;
+            color: #aaa;
+        }
+        #worldLogPanel .log-entry.important { color: #ffaa44; }
+        #worldLogPanel .log-entry.success { color: #88ff88; }
+        #worldLogPanel .log-entry.danger { color: #ff6666; }
     </style>
 </head>
 <body>
@@ -365,7 +404,11 @@
         
         <div id="ui">
             <div id="statusPanel">
-                <div class="panel-title">角色状态</div>
+                <div class="panel-header">
+                    <span class="panel-title">角色状态</span>
+                    <button class="panel-toggle" onclick="togglePanel('statusPanel')">−</button>
+                </div>
+                <div class="panel-content">
                 <div class="stat-row">
                     <span>生命:</span>
                     <div class="stat-bar"><div class="stat-fill health-fill" id="healthBar"></div></div>
@@ -391,32 +434,56 @@
                     <span id="cultivationText">练气一层</span>
                 </div>
             </div>
-            
-            <div id="weatherPanel">
-                <span id="weatherInfo">晴朗 ☀️ 温度: 25°C</span>
+                </div>
+                
+                <div id="weatherPanel">
+                    <div class="panel-header">
+                        <span id="weatherInfo">晴朗 ☀️ 温度: 25°C</span>
+                        <button class="panel-toggle" onclick="togglePanel('weatherPanel')">−</button>
+                    </div>
+                </div>
+                
+                <div id="spiritualInfo">
+                    <div class="panel-header">
+                        <span>灵力: <span id="spiritualLevel">稀薄</span> (<span id="cultivationBonus">1.0x</span>)</span>
+                        <button class="panel-toggle" onclick="togglePanel('spiritualInfo')">−</button>
+                    </div>
+                </div>
+                
+                <div id="inventoryPanel">
+                    <div class="panel-header">
+                        <span class="panel-title">物品栏</span>
+                        <button class="panel-toggle" onclick="togglePanel('inventoryPanel')">−</button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="inventory-grid" id="inventoryGrid"></div>
+                    </div>
+                </div>
+                
+                <div id="worldLogPanel">
+                    <div class="panel-header">
+                        <span class="panel-title">世界信息</span>
+                        <button class="panel-toggle" onclick="togglePanel('worldLogPanel')">−</button>
+                    </div>
+                    <div class="panel-content" id="worldLogContent"></div>
+                </div>
             </div>
-            
-            <div id="spiritualInfo">
-                <div>当前位置灵力浓度: <span id="spiritualLevel">稀薄</span></div>
-                <div>修炼加成: <span id="cultivationBonus">1.0x</span></div>
-            </div>
-            
-            <div id="inventoryPanel">
-                <div class="panel-title">物品栏</div>
-                <div class="inventory-grid" id="inventoryGrid"></div>
-            </div>
-        </div>
         
         <div id="actionPanel">
-            <div class="panel-title">操作菜单</div>
-            <button class="action-btn" onclick="GameActions.build()">建造 (B)</button>
-            <button class="action-btn" onclick="GameActions.craft()">合成 (C)</button>
-            <button class="action-btn" onclick="GameActions.cultivate()">修炼 (X)</button>
-            <button class="action-btn" onclick="GameActions.faction()">门派 (F)</button>
-            <button class="action-btn" onclick="GameActions.attack()">攻击 (空格)</button>
-            <button class="action-btn" onclick="GameActions.interact()">交互 (E)</button>
-            <button class="action-btn" onclick="GameActions.eat()">进食 (G)</button>
-            <button class="action-btn" onclick="GameActions.cook()">烹饪 (R)</button>
+            <div class="panel-header">
+                <span class="panel-title">操作菜单</span>
+                <button class="panel-toggle" onclick="togglePanel('actionPanel')">−</button>
+            </div>
+            <div class="panel-content">
+                <button class="action-btn" onclick="GameActions.build()">建造 (B)</button>
+                <button class="action-btn" onclick="GameActions.craft()">合成 (C)</button>
+                <button class="action-btn" onclick="GameActions.cultivate()">修炼 (X)</button>
+                <button class="action-btn" onclick="GameActions.faction()">门派 (F)</button>
+                <button class="action-btn" onclick="GameActions.attack()">攻击 (空格)</button>
+                <button class="action-btn" onclick="GameActions.interact()">交互 (E)</button>
+                <button class="action-btn" onclick="GameActions.eat()">进食 (G)</button>
+                <button class="action-btn" onclick="GameActions.cook()">烹饪 (R)</button>
+            </div>
         </div>
         
         <div id="dialogBox">
@@ -749,6 +816,11 @@
                 
                 box.appendChild(msg);
                 setTimeout(() => msg.remove(), 3000);
+                
+                // 记录到世界日志（排除单次攻击消息）
+                if (!text.includes('攻击命中') && !text.includes('挥空') && !text.includes('施展')) {
+                    WorldLogSystem.addLog(text, type);
+                }
             }
         };
         
@@ -876,6 +948,35 @@
             
             closeCrafting() {
                 document.getElementById('craftingPanel').classList.remove('show');
+            }
+        };
+        
+        // 面板折叠功能
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('panel-collapsed');
+            const btn = panel.querySelector('.panel-toggle');
+            if (btn) btn.textContent = panel.classList.contains('panel-collapsed') ? '+' : '−';
+        }
+        
+        // 世界信息系统
+        const WorldLogSystem = {
+            logs: [],
+            maxLogs: 50,
+            
+            addLog(message, type = 'normal') {
+                const time = new Date().toLocaleTimeString();
+                this.logs.unshift({ time, message, type });
+                if (this.logs.length > this.maxLogs) this.logs.pop();
+                this.updateUI();
+            },
+            
+            updateUI() {
+                const content = document.getElementById('worldLogContent');
+                if (!content) return;
+                content.innerHTML = this.logs.slice(0, 20).map(log => 
+                    `<div class="log-entry ${log.type}">[${log.time}] ${log.message}</div>`
+                ).join('');
             }
         };
         

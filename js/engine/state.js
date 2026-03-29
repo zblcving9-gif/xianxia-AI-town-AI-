@@ -150,9 +150,9 @@ const GameState = {
     },
     
     updateNPCs(dt) {
+        const NPC_SPEED = 4; // NPC/怪物恒定速度
         this.npcs.forEach(npc => {
             if (npc.body) { npc.x = npc.body.position.x; npc.y = npc.body.position.y; }
-            // NPC/怪物的属性恢复
             npc.mana = Math.min(npc.maxMana || 100, (npc.mana || 100) + dt * 1.5);
             npc.stamina = Math.min(npc.maxStamina || 100, (npc.stamina || 100) + dt * 3);
             if (!npc.isMonster) npc.hunger = Math.max(0, (npc.hunger || 100) - dt * 0.3);
@@ -160,9 +160,12 @@ const GameState = {
             if (npc.stateTimer <= 0) this.updateNPCAI(npc);
             if (npc.state === 'walking' || npc.state === 'chasing') {
                 const dx = npc.targetX - npc.x, dy = npc.targetY - npc.y, dist = Math.hypot(dx, dy);
-                const spd = npc.speed * ((npc.stamina || 100) / 100 * 0.5 + 0.5);
-                if (dist > 5) { if (npc.body) Core.setVelocity(npc.body, { x: (dx / dist) * spd, y: (dy / dist) * spd }); npc.stamina = Math.max(0, npc.stamina - dt); }
-                else { npc.state = 'idle'; if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 }); }
+                if (dist > 5) {
+                    const moveX = (dx / dist) * NPC_SPEED;
+                    const moveY = (dy / dist) * NPC_SPEED;
+                    if (npc.body) Core.setPosition(npc.body, { x: npc.x + moveX, y: npc.y + moveY });
+                }
+                else { npc.state = 'idle'; }
             }
             if (!npc.isMonster) SocialSystem.updateNPCSocial(npc, dt);
         });
