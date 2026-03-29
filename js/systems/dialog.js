@@ -4,441 +4,166 @@
  */
 
 const DialogSystem = {
-    currentNPC: null,
-    isDialogOpen: false,
-    dialogHistory: [],
+    currentNPC: null, isDialogOpen: false, dialogHistory: [],
     apiKey: localStorage.getItem('qwen_api_key') || '',
     
-    init() {
-        // 初始化对话系统
-    },
-    
-    update(dt) {
-        // 更新对话相关逻辑
-    },
+    init() {},
+    update(dt) {},
     
     startDialog(npc) {
-        this.currentNPC = npc;
-        this.isDialogOpen = true;
-        
-        // 更新关系
+        this.currentNPC = npc; this.isDialogOpen = true;
         FactionSystem.updateNPCRelation(npc);
-        
-        // 显示对话框
-        const dialogBox = document.getElementById('dialogBox');
-        dialogBox.classList.add('show');
-        
-        // 显示初始对话选项
+        document.getElementById('dialogBox').classList.add('show');
         this.showOptions(npc);
     },
     
     showOptions(npc) {
-        const speaker = document.getElementById('dialogSpeaker');
-        const content = document.getElementById('dialogContent');
-        const options = document.getElementById('dialogOptions');
-        
-        speaker.textContent = npc.name;
-        
-        // 根据NPC类型和关系显示不同内容
-        let greeting = this.getGreeting(npc);
-        content.innerHTML = greeting;
-        
-        // 生成选项
-        let optionHTML = '';
-        
-        optionHTML += `<div class="dialog-option" onclick="DialogSystem.ask('greeting')">问候</div>`;
-        
-        if (npc.isQuestGiver) {
-            optionHTML += `<div class="dialog-option" onclick="DialogSystem.ask('quest')">询问任务</div>`;
-        }
-        
-        if (npc.type === 'blacksmith') {
-            optionHTML += `<div class="dialog-option" onclick="DialogSystem.ask('craft')">打造装备</div>`;
-        }
-        
-        if (npc.type === 'merchant') {
-            optionHTML += `<div class="dialog-option" onclick="DialogSystem.ask('trade')">交易</div>`;
-        }
-        
-        if (npc.type === 'herbalist') {
-            optionHTML += `<div class="dialog-option" onclick="DialogSystem.ask('alchemy')">炼丹</div>`;
-        }
-        
-        // 自由对话选项
-        optionHTML += `<div class="dialog-option" onclick="DialogSystem.freeChat()">自由对话</div>`;
-        
-        // API设置选项
-        optionHTML += `<div class="dialog-option" onclick="DialogSystem.showApiSettings()">API设置</div>`;
-        
-        optionHTML += `<div class="dialog-option" onclick="DialogSystem.endDialog()">离开</div>`;
-        
-        options.innerHTML = optionHTML;
+        document.getElementById('dialogSpeaker').textContent = npc.name;
+        document.getElementById('dialogContent').innerHTML = this.getGreeting(npc);
+        let opt = `<div class="dialog-option" onclick="DialogSystem.ask('greeting')">问候</div>`;
+        if (npc.isQuestGiver) opt += `<div class="dialog-option" onclick="DialogSystem.ask('quest')">询问任务</div>`;
+        if (npc.type === 'blacksmith') opt += `<div class="dialog-option" onclick="DialogSystem.ask('craft')">打造装备</div>`;
+        if (npc.type === 'merchant') opt += `<div class="dialog-option" onclick="DialogSystem.ask('trade')">交易</div>`;
+        if (npc.type === 'herbalist') opt += `<div class="dialog-option" onclick="DialogSystem.ask('alchemy')">炼丹</div>`;
+        opt += `<div class="dialog-option" onclick="DialogSystem.freeChat()">自由对话</div>`;
+        opt += `<div class="dialog-option" onclick="DialogSystem.showApiSettings()">API设置</div>`;
+        opt += `<div class="dialog-option" onclick="DialogSystem.endDialog()">离开</div>`;
+        document.getElementById('dialogOptions').innerHTML = opt;
     },
     
     getGreeting(npc) {
-        const rel = npc.relationship;
-        
-        if (rel >= 50) {
-            return `"${GameState.player.name}道友！很高兴见到你！"`;
-        } else if (rel >= 20) {
-            return `"哦，是${GameState.player.name}啊，有什么事吗？"`;
-        } else if (rel >= -20) {
-            return `"..."`;
-        } else {
-            return `"哼，又是你，有什么话快说。"`;
-        }
+        const r = npc.relationship;
+        if (r >= 50) return `"${GameState.player.name}道友！很高兴见到你！"`;
+        if (r >= 20) return `"哦，是${GameState.player.name}啊，有什么事吗？"`;
+        if (r >= -20) return `"..."`;
+        return `"哼，又是你，有什么话快说。"`;
     },
     
     ask(topic) {
         const npc = this.currentNPC;
-        const content = document.getElementById('dialogContent');
-        const options = document.getElementById('dialogOptions');
-        
-        let response = '';
-        
-        switch(topic) {
-            case 'greeting':
-                response = this.generateGreetingResponse(npc);
-                npc.relationship += 1;
-                break;
-                
-            case 'quest':
-                response = this.generateQuestResponse(npc);
-                break;
-                
-            case 'craft':
-                response = this.showCraftMenu(npc);
-                break;
-                
-            case 'trade':
-                response = this.showTradeMenu(npc);
-                break;
-                
-            case 'alchemy':
-                response = this.showAlchemyMenu(npc);
-                break;
-        }
-        
-        content.innerHTML = response;
-        options.innerHTML = `<div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>`;
+        let res = '';
+        if (topic === 'greeting') { res = this.generateGreetingResponse(npc); npc.relationship += 1; }
+        else if (topic === 'quest') res = this.generateQuestResponse(npc);
+        else if (topic === 'craft') res = this.showCraftMenu();
+        else if (topic === 'trade') res = this.showTradeMenu();
+        else if (topic === 'alchemy') res = this.showAlchemyMenu();
+        document.getElementById('dialogContent').innerHTML = res;
+        document.getElementById('dialogOptions').innerHTML = `<div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>`;
     },
     
     generateGreetingResponse(npc) {
-        const responses = {
-            elder: `"修行之路漫漫，道友要多加努力啊。我看你资质不错，假以时日必成大器。"`,
-            blacksmith: `"我的铁锤可是千锤百炼，打造出来的法器都是上品！需要什么尽管说。"`,
-            merchant: `"做生意讲究诚信，我这里的东西保证童叟无欺！看看有什么需要的？"`,
-            herbalist: `"天地灵物，皆可入药。我这有些珍稀药材，道友若有需要可以换取。"`,
-            disciple: `"师姐/师兄好！我正在努力修炼，争取早日突破。"`,
-            leader: `"门派的发展需要每个人的努力，希望道友能为门派做出贡献。"`,
-            wanderer: `"修仙之路，各自有缘。我是自由自在的散修，无拘无束。"`
-        };
-        
-        return responses[npc.type] || `"你好，有什么事吗？"`;
+        const r = { elder:'"修行之路漫漫，道友要多加努力。"', blacksmith:'"我的铁锤可是千锤百炼！"', merchant:'"做生意讲究诚信！"', herbalist:'"天地灵物，皆可入药。"', disciple:'"师兄好！我正在努力修炼。"', leader:'"门派的发展需要每个人的努力。"', wanderer:'"修仙之路，各自有缘。"' };
+        return r[npc.type] || '"你好，有什么事吗？"';
     },
     
-    generateQuestResponse(npc) {
-        // 检查是否有未完成的任务
-        const player = GameState.player;
-        
-        // 简单任务系统
-        const quest = {
-            type: 'gather',
-            target: 'herb',
-            count: 5,
-            reward: { cultivation: 20, gold: 30 }
-        };
-        
-        return `
-            <p>"道友，我正需要一些材料。"</p>
-            <p>任务: 采集 ${quest.count} 个灵草</p>
-            <p>奖励: ${quest.reward.cultivation} 修炼点, ${quest.reward.gold} 金币</p>
-            <div class="dialog-option" onclick="DialogSystem.acceptQuest()">接受任务</div>
-        `;
+    generateQuestResponse() {
+        return `<p>"道友，我正需要一些材料。"</p><p>任务: 采集5个灵草</p><p>奖励: 20修炼点, 30金币</p><div class="dialog-option" onclick="DialogSystem.acceptQuest()">接受任务</div>`;
     },
     
     acceptQuest() {
-        const npc = this.currentNPC;
-        const player = GameState.player;
-        
-        // 检查任务条件
-        if (GameState.hasItem(player, 'herb', 5)) {
-            GameState.removeItem(player, 'herb', 5);
-            player.cultivation += 20;
-            player.gold += 30;
-            npc.relationship += 10;
-            
+        if (GameState.hasItem(GameState.player, 'herb', 5)) {
+            GameState.removeItem(GameState.player, 'herb', 5);
+            GameState.player.cultivation += 20; GameState.player.gold += 30;
+            this.currentNPC.relationship += 10;
             Game.showMessage('任务完成！获得奖励', 'success');
-            this.showOptions(npc);
-        } else {
-            Game.showMessage('任务条件未满足', 'warning');
-            document.getElementById('dialogContent').innerHTML = '<p>你还没有收集足够的灵草。</p>';
-        }
+            this.showOptions(this.currentNPC);
+        } else { Game.showMessage('任务条件未满足', 'warning'); }
     },
     
-    showCraftMenu(npc) {
-        return `
-            <p>"我可以帮你打造装备："</p>
-            <div style="margin-top: 10px;">
-                <button class="action-btn" onclick="DialogSystem.craftItem('sword')">
-                    打造剑 (石材x10, 金币x50)
-                </button>
-                <button class="action-btn" onclick="DialogSystem.craftItem('armor')">
-                    打造护甲 (石材x15, 金币x80)
-                </button>
-            </div>
-        `;
+    showCraftMenu() {
+        return `<p>"我可以帮你打造装备："</p><button class="action-btn" onclick="DialogSystem.craftItem('sword')">打造剑(石材x10,金币x50)</button><button class="action-btn" onclick="DialogSystem.craftItem('armor')">打造护甲(石材x15,金币x80)</button>`;
     },
     
-    craftItem(itemType) {
-        const player = GameState.player;
-        const costs = {
-            sword: { stone: 10, gold: 50 },
-            armor: { stone: 15, gold: 80 }
-        };
-        
-        const cost = costs[itemType];
-        
-        if (GameState.hasItem(player, 'stone', cost.stone) && player.gold >= cost.gold) {
-            GameState.removeItem(player, 'stone', cost.stone);
-            player.gold -= cost.gold;
-            
-            if (itemType === 'sword') {
-                player.attack += 5;
-                Game.showMessage('打造成功！攻击力+5', 'success');
-            } else {
-                player.defense += 3;
-                Game.showMessage('打造成功！防御力+3', 'success');
-            }
-        } else {
-            Game.showMessage('材料不足', 'warning');
-        }
+    craftItem(type) {
+        const c = { sword: { stone: 10, gold: 50 }, armor: { stone: 15, gold: 80 } };
+        if (GameState.hasItem(GameState.player, 'stone', c[type].stone) && GameState.player.gold >= c[type].gold) {
+            GameState.removeItem(GameState.player, 'stone', c[type].stone);
+            GameState.player.gold -= c[type].gold;
+            if (type === 'sword') { GameState.player.attack += 5; Game.showMessage('攻击力+5', 'success'); }
+            else { GameState.player.defense += 3; Game.showMessage('防御力+3', 'success'); }
+        } else { Game.showMessage('材料不足', 'warning'); }
     },
     
-    showTradeMenu(npc) {
-        const items = [
-            { id: 'pill_healing', name: '疗伤丹', price: 30 },
-            { id: 'pill_cultivation', name: '聚气丹', price: 80 },
-            { id: 'herb', name: '灵草', price: 10 }
-        ];
-        
-        let html = '<p>"看看有什么需要的："</p><div style="margin-top: 10px;">';
-        
-        items.forEach(item => {
-            html += `<button class="action-btn" onclick="DialogSystem.buyItem('${item.id}', ${item.price})">
-                ${item.name} - ${item.price}金币
-            </button>`;
-        });
-        
-        html += '</div>';
-        return html;
+    showTradeMenu() {
+        return `<p>"看看有什么需要的："</p><button class="action-btn" onclick="DialogSystem.buyItem('pill_healing',30)">疗伤丹-30金币</button><button class="action-btn" onclick="DialogSystem.buyItem('pill_cultivation',80)">聚气丹-80金币</button><button class="action-btn" onclick="DialogSystem.buyItem('herb',10)">灵草-10金币</button>`;
     },
     
-    buyItem(itemId, price) {
-        const player = GameState.player;
-        
-        if (player.gold >= price) {
-            player.gold -= price;
-            const item = { ...GameData.items[itemId], count: 1 };
-            GameState.addItem(player, item);
-            Game.showMessage(`购买成功！获得 ${item.name}`, 'success');
-        } else {
-            Game.showMessage('金币不足', 'warning');
-        }
+    buyItem(id, price) {
+        if (GameState.player.gold >= price) {
+            GameState.player.gold -= price;
+            GameState.addItem(GameState.player, { ...GameData.items[id], count: 1 });
+            Game.showMessage('购买成功', 'success');
+        } else { Game.showMessage('金币不足', 'warning'); }
     },
     
-    showAlchemyMenu(npc) {
-        return `
-            <p>"我可以帮你炼制丹药："</p>
-            <div style="margin-top: 10px;">
-                <button class="action-btn" onclick="DialogSystem.craftPill('healing')">
-                    疗伤丹 (灵草x3)
-                </button>
-                <button class="action-btn" onclick="DialogSystem.craftPill('cultivation')">
-                    聚气丹 (灵草x5, 灵石x1)
-                </button>
-            </div>
-        `;
+    showAlchemyMenu() {
+        return `<p>"我可以帮你炼制丹药："</p><button class="action-btn" onclick="DialogSystem.craftPill('healing')">疗伤丹(灵草x3)</button><button class="action-btn" onclick="DialogSystem.craftPill('cultivation')">聚气丹(灵草x5,灵石x1)</button>`;
     },
     
     craftPill(type) {
-        const player = GameState.player;
-        
-        if (type === 'healing') {
-            if (GameState.hasItem(player, 'herb', 3)) {
-                GameState.removeItem(player, 'herb', 3);
-                const pill = { ...GameData.items.pill_healing, count: 1 };
-                GameState.addItem(player, pill);
-                Game.showMessage('炼丹成功！', 'success');
-            } else {
-                Game.showMessage('材料不足', 'warning');
-            }
-        } else if (type === 'cultivation') {
-            if (GameState.hasItem(player, 'herb', 5) && GameState.hasItem(player, 'spirit_stone', 1)) {
-                GameState.removeItem(player, 'herb', 5);
-                GameState.removeItem(player, 'spirit_stone', 1);
-                const pill = { ...GameData.items.pill_cultivation, count: 1 };
-                GameState.addItem(player, pill);
-                Game.showMessage('炼丹成功！', 'success');
-            } else {
-                Game.showMessage('材料不足', 'warning');
-            }
-        }
+        const p = GameState.player;
+        if (type === 'healing' && GameState.hasItem(p, 'herb', 3)) {
+            GameState.removeItem(p, 'herb', 3);
+            GameState.addItem(p, { ...GameData.items.pill_healing, count: 1 });
+            Game.showMessage('炼丹成功', 'success');
+        } else if (type === 'cultivation' && GameState.hasItem(p, 'herb', 5) && GameState.hasItem(p, 'spirit_stone', 1)) {
+            GameState.removeItem(p, 'herb', 5); GameState.removeItem(p, 'spirit_stone', 1);
+            GameState.addItem(p, { ...GameData.items.pill_cultivation, count: 1 });
+            Game.showMessage('炼丹成功', 'success');
+        } else { Game.showMessage('材料不足', 'warning'); }
     },
     
     async freeChat() {
-        const content = document.getElementById('dialogContent');
-        const options = document.getElementById('dialogOptions');
-        
-        content.innerHTML = `
-            <p>输入你想说的话：</p>
-            <input type="text" id="chatInput" style="width: 100%; padding: 8px; margin-top: 10px; 
-                   background: #2a2a4a; border: 1px solid #4a4a8a; color: #fff; border-radius: 4px;"
-                   onkeypress="if(event.key==='Enter') DialogSystem.sendChat()">
-        `;
-        
-        options.innerHTML = `
-            <div class="dialog-option" onclick="DialogSystem.sendChat()">发送</div>
-            <div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>
-        `;
+        document.getElementById('dialogContent').innerHTML = `<p>输入你想说的话：</p><input type="text" id="chatInput" style="width:100%;padding:8px;background:#2a2a4a;border:1px solid #4a4a8a;color:#fff;border-radius:4px;" onkeypress="if(event.key==='Enter')DialogSystem.sendChat()">`;
+        document.getElementById('dialogOptions').innerHTML = `<div class="dialog-option" onclick="DialogSystem.sendChat()">发送</div><div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>`;
     },
     
     async sendChat() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        
-        if (!message) return;
-        
-        const content = document.getElementById('dialogContent');
-        content.innerHTML = '<p>思考中...</p>';
-        
-        // 调用Qwen API
-        const response = await this.callQwenAPI(message);
-        
-        content.innerHTML = `<p>${response}</p>`;
-        
-        // 记录对话历史
-        this.dialogHistory.push({
-            role: 'user',
-            content: message
-        });
-        this.dialogHistory.push({
-            role: 'assistant',
-            content: response
-        });
+        const msg = document.getElementById('chatInput').value.trim();
+        if (!msg) return;
+        document.getElementById('dialogContent').innerHTML = '<p>思考中...</p>';
+        const res = await this.callQwenAPI(msg);
+        document.getElementById('dialogContent').innerHTML = `<p>${res}</p>`;
+        this.dialogHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: res });
     },
     
     showApiSettings() {
-        const content = document.getElementById('dialogContent');
-        const options = document.getElementById('dialogOptions');
-        
-        content.innerHTML = `
-            <p>配置阿里云Qwen API:</p>
-            <p style="font-size:12px;color:#aaa;margin:10px 0;">获取方式: dashscope.console.aliyun.com</p>
-            <input type="text" id="apiKeyInput" value="${this.apiKey}" placeholder="输入API Key" 
-                   style="width:100%;padding:8px;margin-top:10px;background:#2a2a4a;border:1px solid #4a4a8a;color:#fff;border-radius:4px;">
-        `;
-        options.innerHTML = `
-            <div class="dialog-option" onclick="DialogSystem.saveApiKey()">保存</div>
-            <div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>
-        `;
+        document.getElementById('dialogContent').innerHTML = `<p>配置阿里云Qwen API:</p><p style="font-size:12px;color:#aaa;">获取:dashscope.console.aliyun.com</p><input type="text" id="apiKeyInput" value="${this.apiKey}" placeholder="输入API Key" style="width:100%;padding:8px;margin-top:10px;background:#2a2a4a;border:1px solid #4a4a8a;color:#fff;border-radius:4px;">`;
+        document.getElementById('dialogOptions').innerHTML = `<div class="dialog-option" onclick="DialogSystem.saveApiKey()">保存</div><div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>`;
     },
     
     saveApiKey() {
-        const input = document.getElementById('apiKeyInput');
-        this.apiKey = input.value.trim();
+        this.apiKey = document.getElementById('apiKeyInput').value.trim();
         localStorage.setItem('qwen_api_key', this.apiKey);
         Game.showMessage('API Key已保存', 'success');
         this.showOptions(this.currentNPC);
     },
     
     async callQwenAPI(message) {
+        if (!this.apiKey) return '请先在API设置中配置您的阿里云Qwen API Key。';
         const npc = this.currentNPC;
-        
-        if (!this.apiKey) {
-            return '请先在API设置中配置您的阿里云Qwen API Key。';
-        }
-        
-        const systemPrompt = `你是修仙世界NPC，名字${npc.name}，身份${this.getNPCRole(npc.type)}。
-关系值${npc.relationship}(-100到100)。天气${WeatherSystem.weatherName}。
-用修仙语气回复，不超过80字。`;
-        
         const messages = [
-            { role: 'system', content: systemPrompt },
-            ...this.dialogHistory.slice(-6),
-            { role: 'user', content: message }
+            { role: 'system', content: `你是修仙世界NPC，名字${npc.name}，身份${this.getNPCRole(npc.type)}。关系值${npc.relationship}。用修仙语气回复，不超过80字。` },
+            ...this.dialogHistory.slice(-6), { role: 'user', content: message }
         ];
-        
         try {
-            const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'qwen-turbo',
-                    messages: messages
-                })
+            const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` },
+                body: JSON.stringify({ model: 'qwen-turbo', messages })
             });
-            
-            const data = await response.json();
-            if (data.choices && data.choices[0]) {
-                return data.choices[0].message.content;
-            }
-            return '响应异常，请检查API Key是否正确。';
-        } catch (error) {
-            console.error('API调用失败:', error);
-            return this.simulateResponse(message, npc);
-        }
+            const data = await res.json();
+            return data.choices?.[0]?.message?.content || '响应异常';
+        } catch (e) { return this.simulateResponse(npc); }
     },
     
-    simulateResponse(message, npc) {
-        // 模拟AI响应（当API不可用时）
-        const responses = {
-            elder: [
-                '修行之道，在于持之以恒。',
-                '道友有何困惑？老夫愿为你指点迷津。',
-                '天地大道，玄之又玄，需细细体悟。'
-            ],
-            blacksmith: [
-                '我的锻造技术可是祖传的！',
-                '想要好装备，得有好材料啊。',
-                '铁要趁热打，人要趁早修。'
-            ],
-            merchant: [
-                '客官想要什么？我这里应有尽有！',
-                '诚信经营，童叟无欺。',
-                '今日特惠，灵丹妙药八折！'
-            ],
-            disciple: [
-                '师弟/师妹有什么指教？',
-                '我正要去找师兄请教修炼问题。',
-                '门派最近在招募新人呢。'
-            ]
-        };
-        
-        const npcResponses = responses[npc.type] || ['嗯，有意思的想法。'];
-        return npcResponses[Math.floor(Math.random() * npcResponses.length)];
+    simulateResponse(npc) {
+        const r = { elder: ['修行之道，在于持之以恒。', '道友有何困惑？'], blacksmith: ['我的锻造技术可是祖传的！'], merchant: ['客官想要什么？'], disciple: ['师兄好！'] };
+        return (r[npc.type] || ['嗯。'])[Math.floor(Math.random() * (r[npc.type]?.length || 1))];
     },
     
     getNPCRole(type) {
-        const roles = {
-            elder: '门派长老，德高望重的修仙者',
-            blacksmith: '铁匠，专门打造法器的匠人',
-            merchant: '商人，四处行商的生意人',
-            herbalist: '药农，精通药理的炼丹师',
-            disciple: '门派弟子，正在修炼的年轻人',
-            leader: '门派掌门，一派之主',
-            wanderer: '散修，自由自在的修仙者'
-        };
-        return roles[type] || '普通修仙者';
+        return { elder: '门派长老', blacksmith: '铁匠', merchant: '商人', herbalist: '药农', disciple: '弟子', leader: '掌门', wanderer: '散修' }[type] || '修仙者';
     },
     
-    endDialog() {
-        this.currentNPC = null;
-        this.isDialogOpen = false;
-        
-        document.getElementById('dialogBox').classList.remove('show');
-    }
+    endDialog() { this.currentNPC = null; this.isDialogOpen = false; document.getElementById('dialogBox').classList.remove('show'); }
 };
