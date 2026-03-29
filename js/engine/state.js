@@ -59,17 +59,37 @@ const GameState = {
             { name: '吴掌门', x: 2000, y: 600, type: 'leader', faction: '青云门' }
         ];
         templates.forEach((t, i) => {
-            const npc = {
-                id: i + 1, name: t.name, x: t.x, y: t.y, size: 18, type: t.type, isNPC: true,
-                health: 100, maxHealth: 100, attack: t.type === 'leader' ? 30 : (t.type === 'elder' ? 25 : 15), defense: 10,
-                factionName: t.faction, faction: t.faction ? { name: t.faction, color: this.getFactionColor(t.faction) } : null,
-                relationship: 0, friendship: 0, dialogHistory: [], isQuestGiver: t.type === 'elder' || t.type === 'leader',
-                quests: [], state: 'idle', targetX: t.x, targetY: t.y, stateTimer: 0, speed: 1.5, body: null, skinColor: t.type === 'elder' ? '#d0b090' : '#e0c0a0'
-            };
-            npc.body = Core.createCircle(npc.x, npc.y, npc.size, { label: `npc_${i}`, frictionAir: 0.8 });
-            Core.addBody(npc.body);
+            const npc = this.createEntity(t.name, t.x, t.y, t.type, t.faction, i + 1, false);
             this.npcs.push(npc);
         });
+        // 创建怪物
+        for (let i = 0; i < 5; i++) {
+            const monster = this.createEntity(`妖兽${i+1}`, 500 + Math.random() * 2000, 500 + Math.random() * 1000, 'monster', null, 100 + i, true);
+            this.npcs.push(monster);
+        }
+    },
+    
+    createEntity(name, x, y, type, factionName, id, isMonster) {
+        const baseHealth = isMonster ? 80 : 100;
+        const baseAttack = isMonster ? 15 : (type === 'leader' ? 30 : (type === 'elder' ? 25 : 15));
+        const entity = {
+            id, name, x, y, size: isMonster ? 22 : 18, type, isNPC: !isMonster, isMonster,
+            health: baseHealth, maxHealth: baseHealth, mana: 100, maxMana: 100, stamina: 100, maxStamina: 100,
+            immunity: 100, maxImmunity: 100, hunger: 100, maxHunger: 100,
+            spiritualPower: 50, maxSpiritualPower: 100, cultivation: isMonster ? 50 : Math.random() * 200,
+            cultivationLevel: 1, cultivationRealm: '练气一层', cultivationSpeed: 1,
+            attack: baseAttack, defense: isMonster ? 8 : 10, attackSpeed: 1, attackRange: 80,
+            factionName, faction: factionName ? { name: factionName, color: this.getFactionColor(factionName) } : null,
+            relationship: Math.floor(Math.random() * 201) - 100, // -100到100随机
+            friendship: 0, dialogHistory: [], isQuestGiver: type === 'elder' || type === 'leader',
+            quests: [], state: 'idle', targetX: x, targetY: y, stateTimer: 0, speed: isMonster ? 2 : 1.5,
+            inventory: new Array(20).fill(null), gold: Math.floor(Math.random() * 50),
+            skills: [], techniques: ['basic_meditation'], effects: [],
+            body: null, skinColor: isMonster ? '#8b4513' : (type === 'elder' ? '#d0b090' : '#e0c0a0')
+        };
+        entity.body = Core.createCircle(x, y, entity.size, { label: `${isMonster ? 'monster' : 'npc'}_${id}`, frictionAir: 0.8 });
+        Core.addBody(entity.body);
+        return entity;
     },
     
     getFactionColor(name) {
@@ -116,14 +136,19 @@ const GameState = {
     updateNPCs(dt) {
         this.npcs.forEach(npc => {
             if (npc.body) { npc.x = npc.body.position.x; npc.y = npc.body.position.y; }
+            // NPC/怪物的属性恢复
+            npc.mana = Math.min(npc.maxMana || 100, (npc.mana || 100) + dt * 1.5);
+            npc.stamina = Math.min(npc.maxStamina || 100, (npc.stamina || 100) + dt * 3);
+            if (!npc.isMonster) npc.hunger = Math.max(0, (npc.hunger || 100) - dt * 0.3);
             npc.stateTimer -= dt;
             if (npc.stateTimer <= 0) this.updateNPCAI(npc);
-            if (npc.state === 'walking') {
+            if (npc.state === 'walking' || npc.state === 'chasing') {
                 const dx = npc.targetX - npc.x, dy = npc.targetY - npc.y, dist = Math.hypot(dx, dy);
-                if (dist > 5) { if (npc.body) Core.setVelocity(npc.body, { x: (dx / dist) * npc.speed, y: (dy / dist) * npc.speed }); }
+                const spd = npc.speed * ((npc.stamina || 100) / 100 * 0.5 + 0.5);
+                if (dist > 5) { if (npc.body) Core.setVelocity(npc.body, { x: (dx / dist) * spd, y: (dy / dist) * spd }); npc.stamina = Math.max(0, npc.stamina - dt); }
                 else { npc.state = 'idle'; if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 }); }
             }
-            SocialSystem.updateNPCSocial(npc, dt);
+            if (!npc.isMonster) SocialSystem.updateNPCSocial(npc, dt);
         });
     },
     

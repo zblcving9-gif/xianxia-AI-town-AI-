@@ -240,14 +240,30 @@ const Graphics = {
     drawNPC(x, y, npc, z, time) {
         const ctx = this.ctx, s = npc.size * z;
         const bob = Math.sin(time * 0.003 + npc.id) * 2;
-        ctx.fillStyle = npc.faction ? npc.faction.color : '#8a8aaa';
-        ctx.beginPath(); ctx.arc(x, y + bob, s, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = npc.skinColor || '#e0c0a0';
-        ctx.beginPath(); ctx.arc(x, y - s/3 + bob, s * 0.45, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#333';
-        ctx.beginPath(); ctx.arc(x - s * 0.15, y - s * 0.35 + bob, s * 0.1, 0, Math.PI * 2);
-        ctx.arc(x + s * 0.15, y - s * 0.35 + bob, s * 0.1, 0, Math.PI * 2); ctx.fill();
-        if (npc.isQuestGiver) { ctx.fillStyle = '#ffff44'; ctx.font = `${14 * z}px Arial`; ctx.fillText('!', x, y - s - 20 + bob); }
+        // 怪物使用不同颜色和样式
+        if (npc.isMonster) {
+            ctx.fillStyle = '#8b4513';
+            ctx.beginPath(); ctx.arc(x, y + bob, s, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#654321';
+            ctx.beginPath(); ctx.arc(x, y - s/4 + bob, s * 0.6, 0, Math.PI * 2); ctx.fill();
+            // 红色眼睛
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath(); ctx.arc(x - s * 0.2, y - s * 0.2 + bob, s * 0.15, 0, Math.PI * 2);
+            ctx.arc(x + s * 0.2, y - s * 0.2 + bob, s * 0.15, 0, Math.PI * 2); ctx.fill();
+        } else {
+            ctx.fillStyle = npc.faction ? npc.faction.color : '#8a8aaa';
+            ctx.beginPath(); ctx.arc(x, y + bob, s, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = npc.skinColor || '#e0c0a0';
+            ctx.beginPath(); ctx.arc(x, y - s/3 + bob, s * 0.45, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.beginPath(); ctx.arc(x - s * 0.15, y - s * 0.35 + bob, s * 0.1, 0, Math.PI * 2);
+            ctx.arc(x + s * 0.15, y - s * 0.35 + bob, s * 0.1, 0, Math.PI * 2); ctx.fill();
+            if (npc.isQuestGiver) { ctx.fillStyle = '#ffff44'; ctx.font = `${14 * z}px Arial`; ctx.fillText('!', x, y - s - 20 + bob); }
+        }
+        // 血条
+        ctx.fillStyle = '#333'; ctx.fillRect(x - s, y - s - 25, s * 2, 4 * z);
+        ctx.fillStyle = npc.isMonster ? '#ff4444' : '#44ff44';
+        ctx.fillRect(x - s, y - s - 25, s * 2 * (npc.health / npc.maxHealth), 4 * z);
     },
     
     drawBuilding(x, y, b, z) {

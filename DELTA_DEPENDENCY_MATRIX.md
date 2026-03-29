@@ -1,8 +1,8 @@
-# 文件依赖增量矩阵 - v3
+# 文件依赖增量矩阵 - v4
 
 ## 版本变更说明
 
-本次迭代为 **v2 → v3** 的增量变更
+本次迭代为 **v3 → v4** 的增量变更
 
 ---
 
@@ -10,42 +10,73 @@
 
 | 文件 | 修改行数 | 修改内容 |
 |------|----------|----------|
-| `js/engine/state.js` | ~1行 | 修复物品栏初始化 |
-| `js/systems/resource.js` | ~15行 | 优化采集逻辑顺序 |
+| `js/engine/state.js` | ~95行 | NPC/怪物完整属性+随机好感度 |
+| `js/engine/renderer.js` | ~20行 | 怪物渲染样式 |
 
 ---
 
-## Bug修复详情
+## 新增功能详情
 
-### Bug 1: 物品栏显示已满但实际为空
-**原因**: `inventory: []` 初始化为空数组，`findIndex` 无法找到空槽位
-**修复**: 改为 `inventory: new Array(20).fill(null)`
+### 1. NPC/怪物完整属性
 
-### Bug 2: 采集时提示资源已耗尽
-**原因**: 检查顺序错误，先检查资源耗尽再检查体力
-**修复**: 调整检查顺序，体力检查前置
+**新增属性列表**：
+
+| 属性类型 | 新增属性 |
+|----------|----------|
+| 能量系统 | mana, stamina, hunger, immunity, spiritualPower |
+| 修仙系统 | cultivation, cultivationLevel, cultivationRealm, cultivationSpeed |
+| 物品系统 | inventory, gold, techniques |
+| 战斗系统 | attackSpeed, attackRange, defense |
+
+### 2. 怪物系统
+
+**创建内容**：
+- 5只妖兽怪物
+- 随机分布在地图中
+- 独特外观（棕色身体+红眼）
+- 更高的攻击力和速度
+
+### 3. 好感度随机化
+
+```
+relationship: Math.floor(Math.random() * 201) - 100
+// 范围：-100 到 +100
+```
+
+**好感度分布**：
+| 好感度范围 | 态度 | 行为 |
+|------------|------|------|
+| -100 ~ -50 | 敌对 | 主动攻击玩家 |
+| -49 ~ -20 | 冷淡 | 不愿交流 |
+| -19 ~ 20 | 中立 | 正常交互 |
+| 21 ~ 50 | 友善 | 热情回应 |
+| 51 ~ 100 | 挚友 | 任务奖励加成 |
 
 ---
 
-## 代码变更对比
+## 代码变更详情
 
-### state.js (第25行)
-```
-原: inventory: [], inventorySize: 20, gold: 100,
-新: inventory: new Array(20).fill(null), inventorySize: 20, gold: 100,
+### state.js 新增 createEntity 方法
+
+```javascript
+createEntity(name, x, y, type, factionName, id, isMonster) {
+    // 创建拥有完整属性的NPC或怪物
+}
 ```
 
-### resource.js gather函数检查顺序
-```
-原顺序: 冷却 → 距离 → 资源量 → 体力
-新顺序: 冷却 → 体力 → 资源量 → 距离
+### renderer.js 怪物渲染
+
+```javascript
+if (npc.isMonster) {
+    // 怪物特殊渲染：棕色身体、红色眼睛
+}
 ```
 
 ---
 
 ## 增量矩阵
 
-**v2 → v3 变化矩阵:** 无依赖变化，仅内部逻辑修复
+**v3 → v4 变化矩阵:** 无依赖变化
 
 ---
 
@@ -54,5 +85,5 @@
 | 规则 | 状态 | 说明 |
 |------|------|------|
 | 根节点修改≤50行 | ✅ | 根节点未修改 |
-| 二级节点修改≤100行 | ✅ | state.js 1行, resource.js ~15行 |
-| 依赖关系未变化 | ✅ | 符合 |
+| 二级节点修改≤100行 | ✅ | state.js ~95行, renderer.js ~20行 |
+| 文件总行数≤400行 | ✅ | state.js 240行, renderer.js 312行 |
