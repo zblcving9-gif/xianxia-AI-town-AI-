@@ -38,19 +38,19 @@ const SocialSystem = {
     },
     
     updateNPCSocial(npc, dt) {
-        // 社交计时器
         npc.socialTimer -= dt;
         
         if (npc.socialTimer <= 0) {
             this.processNPCSocial(npc);
-            npc.socialTimer = 30 + Math.random() * 60; // 30-90秒
+            npc.socialTimer = 30 + Math.random() * 60;
+            // 无门派NPC：通过社交触发加入门派
+            if (!npc.factionName && Math.random() < 0.15) {
+                NPCAISystem.tryJoinFaction(npc);
+            }
         }
         
-        // 检查是否与其他NPC接近
         const nearbyNPCs = this.getNearbyNPCs(npc, 100);
-        
         if (nearbyNPCs.length > 0 && Math.random() < 0.01) {
-            // 发生社交交互
             this.socialize(npc, nearbyNPCs[0]);
         }
     },
@@ -110,34 +110,39 @@ const SocialSystem = {
     },
     
     friendlyInteraction(npc1, npc2) {
-        // 友好交互：交换物品、分享信息
-        const actions = [
-            '互相问候',
-            '切磋技艺',
-            '交换修炼心得',
-            '分享资源'
-        ];
-        
+        // 友好交互：交换物品、分享信息、互相传授功法
+        const actions = ['互相问候', '切磋技艺', '交换修炼心得', '分享资源', '传授功法'];
         const action = actions[Math.floor(Math.random() * actions.length)];
         
         // 关系加深
         npc1.socialRelations[npc2.id] = Math.min(100, (npc1.socialRelations[npc2.id] || 0) + 2);
         npc2.socialRelations[npc1.id] = Math.min(100, (npc2.socialRelations[npc1.id] || 0) + 2);
         
-        // 特殊效果
         if (action === '切磋技艺') {
-            // 双方获得修炼点
-            npc1.cultivation = (npc1.cultivation || 0) + 1;
-            npc2.cultivation = (npc2.cultivation || 0) + 1;
+            npc1.cultivation = (npc1.cultivation || 0) + 1.5;
+            npc2.cultivation = (npc2.cultivation || 0) + 1.5;
+        } else if (action === '分享资源') {
+            // 有资源的NPC给另一方1个物品
+            const items = ['herb', 'wood', 'stone'];
+            for (const itemId of items) {
+                if (GameState.hasItem(npc1, itemId, 2)) {
+                    GameState.removeItem(npc1, itemId, 1);
+                    GameState.addItem(npc2, GameState.resources ? 
+                        ResourceSystem.getDropItem(itemId) : { id: itemId, count: 1 });
+                    break;
+                }
+            }
+        } else if (action === '传授功法') {
+            // 相同门派NPC互相分享功法技能
+            if (npc1.factionName && npc1.factionName === npc2.factionName) {
+                npc1.cultivation = (npc1.cultivation || 0) + 2;
+                npc2.cultivation = (npc2.cultivation || 0) + 2;
+                npc1.factionContribution = (npc1.factionContribution || 0) + 2;
+                npc2.factionContribution = (npc2.factionContribution || 0) + 2;
+            }
         }
         
-        // 粒子效果
-        GameState.addParticle(
-            (npc1.x + npc2.x) / 2,
-            (npc1.y + npc2.y) / 2,
-            '#88ff88',
-            5
-        );
+        GameState.addParticle((npc1.x + npc2.x) / 2, (npc1.y + npc2.y) / 2, '#88ff88', 5);
     },
     
     hostileInteraction(npc1, npc2) {

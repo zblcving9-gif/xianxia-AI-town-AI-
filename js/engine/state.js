@@ -96,6 +96,15 @@ const GameState = {
             collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 | 0x0004 }
         });
         Core.addBody(entity.body);
+        // NPC AI专属字段
+        if (!isMonster) {
+            entity.aiTimer = Math.random() * 8;   // 初始随机错开决策时机
+            entity.aiState = 'idle';
+            entity.aiTargetRes = null;
+            entity.baseName = name;
+            entity.factionContribution = 0;
+            entity.factionRank = 0;
+        }
         return entity;
     },
     
@@ -156,34 +165,41 @@ const GameState = {
     },
     
     updateNPCs(dt) {
-        const NPC_SPEED = 4; // NPC/怪物恒定速度
+        const NPC_SPEED = 4;
         this.npcs.forEach(npc => {
             if (npc.body) { npc.x = npc.body.position.x; npc.y = npc.body.position.y; }
             npc.mana = Math.min(npc.maxMana || 100, (npc.mana || 100) + dt * 1.5);
             npc.stamina = Math.min(npc.maxStamina || 100, (npc.stamina || 100) + dt * 3);
             if (!npc.isMonster) npc.hunger = Math.max(0, (npc.hunger || 100) - dt * 0.3);
-            npc.stateTimer -= dt;
-            if (npc.stateTimer <= 0) this.updateNPCAI(npc);
+            // NPC调用完整AI，怪物调用简单AI
+            if (!npc.isMonster) {
+                NPCAISystem.updateAI(npc, dt);
+            } else {
+                npc.stateTimer -= dt;
+                if (npc.stateTimer <= 0) this.updateMonsterAI(npc);
+            }
             if (npc.state === 'walking' || npc.state === 'chasing') {
                 const dx = npc.targetX - npc.x, dy = npc.targetY - npc.y, dist = Math.hypot(dx, dy);
                 if (dist > 5) {
-                    const vx = (dx / dist) * NPC_SPEED;
-                    const vy = (dy / dist) * NPC_SPEED;
-                    if (npc.body) Core.setVelocity(npc.body, { x: vx, y: vy });
-                }
-                else { npc.state = 'idle'; if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 }); }
-            } else {
-                if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 });
-            }
+                    const speed = npc.isMonster ? NPC_SPEED * 1.2 : NPC_SPEED;
+                    if (npc.body) Core.setVelocity(npc.body, { x: (dx / dist) * speed, y: (dy / dist) * speed });
+                } else { npc.state = 'idle'; if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 }); }
+            } else if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 });
             if (!npc.isMonster) SocialSystem.updateNPCSocial(npc, dt);
         });
     },
-    
-    updateNPCAI(npc) {
-        const roll = Math.random();
-        if (roll < 0.3) { npc.state = 'idle'; npc.stateTimer = 2 + Math.random() * 3; if (npc.body) Core.setVelocity(npc.body, { x: 0, y: 0 }); }
-        else if (roll < 0.7) { npc.state = 'walking'; npc.targetX = Math.max(100, Math.min(2900, npc.x + (Math.random() - 0.5) * 200)); npc.targetY = Math.max(100, Math.min(1900, npc.y + (Math.random() - 0.5) * 200)); npc.stateTimer = 3 + Math.random() * 4; }
-        else { npc.state = 'idle'; npc.stateTimer = 1 + Math.random() * 2; }
+
+    updateMonsterAI(npc) {
+        // 怪物简单巡逻/追击AI
+        const player = this.player;
+        const distToPlayer = Math.hypot(player.x - npc.x, player.y - npc.y);
+        if (distToPlayer < 250) {
+            npc.state = 'chasing'; npc.targetX = player.x; npc.targetY = player.y; npc.stateTimer = 1;
+        } else {
+            const roll = Math.random();
+            if (roll < 0.4) { npc.state = 'idle'; npc.stateTimer = 2 + Math.random() * 3; }
+            else { npc.state = 'walking'; npc.targetX = Math.max(100, Math.min(2900, npc.x + (Math.random() - 0.5) * 300)); npc.targetY = Math.max(100, Math.min(1900, npc.y + (Math.random() - 0.5) * 300)); npc.stateTimer = 3 + Math.random() * 4; }
+        }
     },
     
     updateEffects(entity, dt) {
