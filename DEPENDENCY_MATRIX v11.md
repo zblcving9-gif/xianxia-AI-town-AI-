@@ -1,12 +1,12 @@
-# 修仙AI小镇 - 文件依赖关系矩阵 v13
+# 修仙AI小镇 - 文件依赖关系矩阵 v12
 
 ## 版本信息
-- **版本号**: v13
+- **版本号**: v12
 - **更新日期**: 2024年迭代版本
 - **变更说明**: 
-  - 修复碰撞过滤导致的渲染问题
-  - 修复面板显示问题
-  - 确保JavaScript正确初始化
+  - 添加物理碰撞和边界检测
+  - 实现多轮聊天和聊天记录持久化
+  - NPC多功能系统（采集、修炼、休息）
 
 ## 项目文件列表
 
@@ -22,7 +22,7 @@
 | 8 | `js/systems/faction.js` | 二级节点 | 279 | 门派系统 |
 | 9 | `js/systems/weather.js` | 二级节点 | 188 | 天气系统 |
 | 10 | `js/systems/dialog.js` | 二级节点 | 200 | NPC对话 |
-| 11 | `js/systems/cultivation.js` | 二级节点 | 252 | 修炼系统 |
+| 11 | `js/systems/cultivation.js` | 二级节点 | 249 | 修炼系统 |
 | 12 | `js/systems/crafting.js` | 二级节点 | 286 | 合成系统 |
 | 13 | `js/systems/social.js` | 二级节点 | 251 | NPC社交 |
 | 14 | `js/systems/survival.js` | 二级节点 | 278 | 生存系统 |

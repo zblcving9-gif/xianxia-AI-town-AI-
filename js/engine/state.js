@@ -27,7 +27,7 @@ const GameState = {
         };
         this.player.body = Core.createCircle(this.player.x, this.player.y, this.player.size, { 
             label: 'player', frictionAir: 0.1, friction: 0.05, restitution: 0.1,
-            collisionFilter: { category: 0x0001, mask: 0xFFFF }
+            collisionFilter: { category: 0x0001, mask: 0xFFFFFFFF }
         });
         Core.addBody(this.player.body);
         this.addItem(this.player, { id: 'herb', name: '灵草', icon: '🌿', type: 'material', count: 5, description: '炼丹材料' });
@@ -95,7 +95,7 @@ const GameState = {
         entity.body = Core.createCircle(x, y, entity.size, { 
             label: `${isMonster ? 'monster' : 'npc'}_${id}`, 
             frictionAir: 0.1, friction: 0.05, restitution: 0.1,
-            collisionFilter: { category: 0x0002, mask: 0xFFFF }
+            collisionFilter: { category: 0x0002, mask: 0xFFFFFFFF }
         });
         Core.addBody(entity.body);
         return entity;

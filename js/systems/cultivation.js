@@ -32,7 +32,6 @@ const CultivationSystem = {
     
     showPanel() {
         const panel = document.getElementById('cultivationPanel');
-        const content = document.getElementById('cultivationContent');
         
         const player = GameState.player;
         const realm = GameData.getRealm(player.cultivation);
@@ -85,7 +84,11 @@ const CultivationSystem = {
             }
         });
         
-        panel.innerHTML = html;
+        // 更新内容区域而不是整个面板
+        const content = document.getElementById('cultivationContent');
+        if (content) {
+            content.innerHTML = html;
+        }
         panel.classList.add('show');
     },
     

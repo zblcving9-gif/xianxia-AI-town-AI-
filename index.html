@@ -818,7 +818,7 @@ n            border-radius: 8px;
                 setTimeout(() => msg.remove(), 3000);
                 
                 // 记录到世界日志（排除单次攻击消息）
-                if (!text.includes('攻击命中') && !text.includes('挥空') && !text.includes('施展')) {
+                if (typeof WorldLogSystem !== 'undefined' && !text.includes('攻击命中') && !text.includes('挥空') && !text.includes('施展')) {
                     WorldLogSystem.addLog(text, type);
                 }
             }
