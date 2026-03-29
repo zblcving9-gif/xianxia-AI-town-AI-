@@ -7,6 +7,7 @@ const DialogSystem = {
     currentNPC: null,
     isDialogOpen: false,
     dialogHistory: [],
+    apiKey: localStorage.getItem('qwen_api_key') || '',
     
     init() {
         // 初始化对话系统
@@ -65,6 +66,9 @@ const DialogSystem = {
         
         // 自由对话选项
         optionHTML += `<div class="dialog-option" onclick="DialogSystem.freeChat()">自由对话</div>`;
+        
+        // API设置选项
+        optionHTML += `<div class="dialog-option" onclick="DialogSystem.showApiSettings()">API设置</div>`;
         
         optionHTML += `<div class="dialog-option" onclick="DialogSystem.endDialog()">离开</div>`;
         
@@ -324,47 +328,65 @@ const DialogSystem = {
         });
     },
     
+    showApiSettings() {
+        const content = document.getElementById('dialogContent');
+        const options = document.getElementById('dialogOptions');
+        
+        content.innerHTML = `
+            <p>配置阿里云Qwen API:</p>
+            <p style="font-size:12px;color:#aaa;margin:10px 0;">获取方式: dashscope.console.aliyun.com</p>
+            <input type="text" id="apiKeyInput" value="${this.apiKey}" placeholder="输入API Key" 
+                   style="width:100%;padding:8px;margin-top:10px;background:#2a2a4a;border:1px solid #4a4a8a;color:#fff;border-radius:4px;">
+        `;
+        options.innerHTML = `
+            <div class="dialog-option" onclick="DialogSystem.saveApiKey()">保存</div>
+            <div class="dialog-option" onclick="DialogSystem.showOptions(DialogSystem.currentNPC)">返回</div>
+        `;
+    },
+    
+    saveApiKey() {
+        const input = document.getElementById('apiKeyInput');
+        this.apiKey = input.value.trim();
+        localStorage.setItem('qwen_api_key', this.apiKey);
+        Game.showMessage('API Key已保存', 'success');
+        this.showOptions(this.currentNPC);
+    },
+    
     async callQwenAPI(message) {
         const npc = this.currentNPC;
         
-        // 构建系统提示
-        const systemPrompt = `你是一个修仙世界中的NPC，名字叫${npc.name}，身份是${this.getNPCRole(npc.type)}。
-你的性格和说话方式要符合这个身份。
-你与玩家的关系值是${npc.relationship}（-100到100，越高越友好）。
-当前地点的天气是${WeatherSystem.weatherName}。
-请用简洁、符合修仙世界观的语气回复，不要超过100字。`;
+        if (!this.apiKey) {
+            return '请先在API设置中配置您的阿里云Qwen API Key。';
+        }
         
-        // 构建对话历史
+        const systemPrompt = `你是修仙世界NPC，名字${npc.name}，身份${this.getNPCRole(npc.type)}。
+关系值${npc.relationship}(-100到100)。天气${WeatherSystem.weatherName}。
+用修仙语气回复，不超过80字。`;
+        
         const messages = [
             { role: 'system', content: systemPrompt },
-            ...this.dialogHistory.slice(-6), // 只保留最近3轮对话
+            ...this.dialogHistory.slice(-6),
             { role: 'user', content: message }
         ];
         
         try {
-            // 注意：这里需要替换为实际的API Key
-            // 由于是本地演示，这里提供一个模拟响应
-            const response = await this.simulateResponse(message, npc);
-            return response;
-            
-            /* 真实API调用示例：
-            const response = await fetch('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', {
+            const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer YOUR_API_KEY`
+                    'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
                     model: 'qwen-turbo',
-                    input: {
-                        messages: messages
-                    }
+                    messages: messages
                 })
             });
             
             const data = await response.json();
-            return data.output.text;
-            */
+            if (data.choices && data.choices[0]) {
+                return data.choices[0].message.content;
+            }
+            return '响应异常，请检查API Key是否正确。';
         } catch (error) {
             console.error('API调用失败:', error);
             return this.simulateResponse(message, npc);

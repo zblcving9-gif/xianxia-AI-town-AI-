@@ -709,7 +709,8 @@
                 if (nearest) {
                     if (nearest.isNPC) {
                         DialogSystem.startDialog(nearest);
-                    } else if (nearest.type === 'resource') {
+                    } else if (nearest.amount !== undefined) {
+                        // 是资源（有amount属性）
                         ResourceSystem.gather(nearest);
                     }
                 } else {
