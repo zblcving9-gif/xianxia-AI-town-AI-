@@ -22,7 +22,7 @@ const GameState = {
             attack: 10, defense: 5, attackSpeed: 1, attackRange: 80,
             faction: null, factionRank: 0,
             moveUp: false, moveDown: false, moveLeft: false, moveRight: false, speed: 3, velocityX: 0, velocityY: 0,
-            inventory: [], inventorySize: 20, gold: 100,
+            inventory: new Array(20).fill(null), inventorySize: 20, gold: 100,
             skills: [], techniques: [], effects: [], isPlayer: true
         };
         this.player.body = Core.createCircle(this.player.x, this.player.y, this.player.size, { label: 'player', frictionAir: 0.5, friction: 0.3 });

@@ -35,10 +35,10 @@ const ResourceSystem = {
         }
         
         const player = GameState.player;
-        const dist = Math.hypot(resource.x - player.x, resource.y - player.y);
         
-        if (dist > this.gatherRange) {
-            Game.showMessage('距离太远，无法采集', 'warning');
+        // 消耗体力
+        if (player.stamina < 10) {
+            Game.showMessage('体力不足，无法采集', 'warning');
             return;
         }
         
@@ -47,11 +47,12 @@ const ResourceSystem = {
             return;
         }
         
-        // 消耗体力
-        if (player.stamina < 10) {
-            Game.showMessage('体力不足，无法采集', 'warning');
+        const dist = Math.hypot(resource.x - player.x, resource.y - player.y);
+        if (dist > this.gatherRange) {
+            Game.showMessage('距离太远，无法采集', 'warning');
             return;
         }
+        
         player.stamina -= 5;
         
         // 采集
@@ -65,7 +66,7 @@ const ResourceSystem = {
         if (GameState.addItem(player, item)) {
             Game.showMessage(`获得 ${item.name} x${gatherAmount}`, 'success');
         } else {
-            Game.showMessage('物品栏已满！', 'warning');
+            Game.showMessage('物品栏已满，物品掉落在地上', 'warning');
             GameState.dropItem(player.x, player.y, item);
         }
         

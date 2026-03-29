@@ -1,8 +1,8 @@
-# 文件依赖增量矩阵 - v2
+# 文件依赖增量矩阵 - v3
 
 ## 版本变更说明
 
-本次迭代为 **v1 → v2** 的增量变更
+本次迭代为 **v2 → v3** 的增量变更
 
 ---
 
@@ -10,89 +10,49 @@
 
 | 文件 | 修改行数 | 修改内容 |
 |------|----------|----------|
-| `index.html` | ~6行 | 修复资源采集判断条件 |
-| `js/systems/dialog.js` | ~45行 | 添加API Key配置、实现真实Qwen API调用 |
+| `js/engine/state.js` | ~1行 | 修复物品栏初始化 |
+| `js/systems/resource.js` | ~15行 | 优化采集逻辑顺序 |
 
 ---
 
-## 新增依赖关系
+## Bug修复详情
 
-| 源文件 | 目标文件 | 类型 | 说明 |
-|--------|----------|------|------|
-| 无新增 | - | - | 依赖关系未变化 |
+### Bug 1: 物品栏显示已满但实际为空
+**原因**: `inventory: []` 初始化为空数组，`findIndex` 无法找到空槽位
+**修复**: 改为 `inventory: new Array(20).fill(null)`
 
----
-
-## 删除依赖关系
-
-| 源文件 | 目标文件 | 说明 |
-|--------|----------|------|
-| 无删除 | - | - |
+### Bug 2: 采集时提示资源已耗尽
+**原因**: 检查顺序错误，先检查资源耗尽再检查体力
+**修复**: 调整检查顺序，体力检查前置
 
 ---
 
-## 文件变更详情
+## 代码变更对比
 
-### 1. index.html (根节点)
+### state.js (第25行)
 ```
-变更类型: 修改
-变更行数: 约6行
-变更位置: GameActions.interact() 函数
-
-原代码:
-    } else if (nearest.type === 'resource') {
-        ResourceSystem.gather(nearest);
-    }
-
-新代码:
-    } else if (nearest.amount !== undefined) {
-        // 是资源（有amount属性）
-        ResourceSystem.gather(nearest);
-    }
+原: inventory: [], inventorySize: 20, gold: 100,
+新: inventory: new Array(20).fill(null), inventorySize: 20, gold: 100,
 ```
 
-### 2. js/systems/dialog.js (二级节点)
+### resource.js gather函数检查顺序
 ```
-变更类型: 修改
-变更行数: 约45行
-变更位置: 多处
-
-新增内容:
-1. 添加 apiKey 属性，支持localStorage持久化
-2. 新增 showApiSettings() 方法 - 显示API配置面板
-3. 新增 saveApiKey() 方法 - 保存API Key
-4. 重写 callQwenAPI() 方法 - 实现真实的qwen-turbo调用
-   - 使用 dashscope.aliyuncs.com/compatible-mode/v1/chat/completions 接口
-   - 支持动态API Key配置
+原顺序: 冷却 → 距离 → 资源量 → 体力
+新顺序: 冷却 → 体力 → 资源量 → 距离
 ```
 
 ---
 
 ## 增量矩阵
 
-**v1 → v2 变化矩阵:**
-
-```
-         1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
-    Δ  → [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-```
-
-**说明**: 依赖关系矩阵无变化，仅在现有文件内部进行功能修改。
+**v2 → v3 变化矩阵:** 无依赖变化，仅内部逻辑修复
 
 ---
 
-## 功能影响分析
+## 符合迭代规则验证
 
-| 受影响功能 | 影响描述 |
-|------------|----------|
-| 资源采集 | 修复了判断条件，现在可以正常采集树木、矿石等资源 |
-| NPC对话 | 新增API Key配置功能，支持真实的Qwen-turbo对话 |
-| 游戏存档 | API Key使用localStorage保存，刷新后不丢失 |
-
----
-
-## 兼容性说明
-
-- ✅ 向后兼容v1存档
-- ✅ 无需修改其他模块
-- ✅ 符合版本迭代规则
+| 规则 | 状态 | 说明 |
+|------|------|------|
+| 根节点修改≤50行 | ✅ | 根节点未修改 |
+| 二级节点修改≤100行 | ✅ | state.js 1行, resource.js ~15行 |
+| 依赖关系未变化 | ✅ | 符合 |
