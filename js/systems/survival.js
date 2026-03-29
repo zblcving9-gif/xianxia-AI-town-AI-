@@ -77,7 +77,7 @@ const SurvivalSystem = {
             }
         } else {
             // 恢复正常速度
-            const baseSpeed = GameState.player.baseSpeed || 3;
+            const baseSpeed = GameState.player.baseSpeed || 5;
             if (player.speed !== baseSpeed && !player.speedBoosted) {
                 player.speed = baseSpeed;
             }
@@ -241,7 +241,7 @@ const SurvivalSystem = {
         this.isSick = false;
         this.sickType = null;
         this.sickTimer = 0;
-        GameState.player.speed = GameState.player.baseSpeed || 3;
+        GameState.player.speed = GameState.player.baseSpeed || 5;
         Game.showMessage('疾病已痊愈', 'success');
     },
     

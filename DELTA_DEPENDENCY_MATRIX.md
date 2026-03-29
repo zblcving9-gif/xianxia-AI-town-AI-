@@ -1,24 +1,25 @@
-# 文件依赖增量矩阵 - v8
+# 文件依赖增量矩阵 - v9
 
 ## 版本变更说明
 
-本次迭代为 **v7 → v8** 的增量变更
+本次迭代为 **v8 → v9** 的增量变更
 
 ---
 
-## Bug修复
+## 优化内容
 
-### 物理碰撞导致玩家卡住问题
+### 玩家移动速度优化
 
 **问题描述**：
-- 玩家与NPC/怪物重叠时会被物理引擎卡住
-- 多个怪物重叠时玩家无法穿过
-- 物理摩擦力过大导致移动困难
+- 玩家移动速度太慢
+- 速度受体力影响，体力低时移动困难
+- 位置更新系数过小导致移动卡顿
 
-**修复方案**：
-1. 添加碰撞过滤，使玩家和NPC/怪物不发生物理碰撞
-2. 强制位置更新，确保玩家移动流畅
-3. 降低摩擦力参数
+**优化方案**：
+1. 基础速度从3提升到5
+2. 移除速度对体力的依赖
+3. 位置更新系数从10提升到60
+4. 体力消耗降低
 
 ---
 
@@ -26,50 +27,36 @@
 
 | 文件 | 修改行数 | 修改内容 |
 |------|----------|----------|
-| `js/engine/state.js` | ~15行 | 碰撞过滤、强制位置更新 |
+| `js/engine/state.js` | ~10行 | 提升速度、移除体力影响 |
+| `js/systems/survival.js` | ~2行 | baseSpeed默认值更新 |
+| `js/systems/combat.js` | ~1行 | baseSpeed默认值更新 |
 
 ---
 
 ## 代码变更详情
 
-### state.js - 碰撞过滤
-
+### state.js - 速度优化
 ```javascript
-// 玩家创建时添加碰撞过滤
-this.player.body = Core.createCircle(this.player.x, this.player.y, this.player.size, { 
-    label: 'player', frictionAir: 0.5, friction: 0.1,
-    collisionFilter: { group: -1, category: 0x0001, mask: 0x0002 }
-});
+// 基础速度提升
+speed: 5, baseSpeed: 5
 
-// NPC/怪物创建时添加碰撞过滤
-entity.body = Core.createCircle(x, y, entity.size, { 
-    label: `${isMonster ? 'monster' : 'npc'}_${id}`, 
-    frictionAir: 0.8, friction: 0.1,
-    collisionFilter: { group: -1, category: 0x0001, mask: 0x0002 }
-});
+// 移除体力对速度的影响
+const speed = p.speed;  // 原来是 p.speed * (stamina/maxStamina * 0.5 + 0.5)
 
-// 玩家移动时强制位置更新
-if (p.body) {
-    Core.setVelocity(p.body, { x: p.velocityX, y: p.velocityY });
-    // 强制设置位置，避免被其他物理体卡住
-    const targetX = p.x + p.velocityX * dt * 10;
-    const targetY = p.y + p.velocityY * dt * 10;
-    if (len > 0) {
-        Core.setPosition(p.body, { x: targetX, y: targetY });
-    }
-    p.x = p.body.position.x; p.y = p.body.position.y;
-}
+// 位置更新系数提升
+const targetX = p.x + p.velocityX * dt * 60;  // 原来是 dt * 10
 ```
 
 ---
 
-## 碰撞过滤说明
+## 速度对比
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| `group` | -1 | 相同group不碰撞 |
-| `category` | 0x0001 | 碰撞类别 |
-| `mask` | 0x0002 | 只与墙壁碰撞 |
+| 指标 | 修改前 | 修改后 |
+|------|--------|--------|
+| 基础速度 | 3 | 5 |
+| 体力影响 | 50%~100% | 无 |
+| 位置系数 | 10 | 60 |
+| 体力消耗 | dt*2 | dt |
 
 ---
 
@@ -78,5 +65,5 @@ if (p.body) {
 | 规则 | 状态 | 说明 |
 |------|------|------|
 | 根节点修改≤50行 | ✅ | index.html 未修改 |
-| 二级节点修改≤100行 | ✅ | state.js ~15行 |
-| 文件行数≤400行 | ✅ | state.js 308行 |
+| 二级节点修改≤100行 | ✅ | 合计 ~13行 |
+| 文件行数≤400行 | ✅ | 全部符合 |

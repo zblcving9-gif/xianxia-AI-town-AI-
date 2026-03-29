@@ -21,7 +21,7 @@ const GameState = {
             spiritualPower: 50, maxSpiritualPower: 100, cultivation: 0, cultivationLevel: 1, cultivationRealm: '练气一层', cultivationSpeed: 1,
             attack: 10, defense: 5, attackSpeed: 1, attackRange: 80,
             faction: null, factionRank: 0,
-            moveUp: false, moveDown: false, moveLeft: false, moveRight: false, speed: 3, baseSpeed: 3, velocityX: 0, velocityY: 0,
+            moveUp: false, moveDown: false, moveLeft: false, moveRight: false, speed: 5, baseSpeed: 5, velocityX: 0, velocityY: 0,
             inventory: new Array(20).fill(null), inventorySize: 20, gold: 100,
             skills: [], techniques: [], effects: [], isPlayer: true
         };
@@ -123,27 +123,28 @@ const GameState = {
     
     updatePlayer(dt) {
         const p = this.player;
-        // 速度保护：确保速度不会低于baseSpeed的30%
-        const minSpeed = (p.baseSpeed || 3) * 0.3;
-        if (p.speed < minSpeed) p.speed = p.baseSpeed || 3;
+        // 速度保护：确保速度不会低于baseSpeed的50%
+        const minSpeed = (p.baseSpeed || 5) * 0.5;
+        if (p.speed < minSpeed) p.speed = p.baseSpeed || 5;
         let vx = 0, vy = 0;
         if (p.moveUp) vy -= 1; if (p.moveDown) vy += 1; if (p.moveLeft) vx -= 1; if (p.moveRight) vx += 1;
         const len = Math.hypot(vx, vy);
         if (len > 0) { vx /= len; vy /= len; }
-        const speed = p.speed * (p.stamina / p.maxStamina * 0.5 + 0.5);
+        // 速度不再受体力影响，保持流畅移动
+        const speed = p.speed;
         p.velocityX = vx * speed; p.velocityY = vy * speed;
         if (p.body) {
             Core.setVelocity(p.body, { x: p.velocityX, y: p.velocityY });
             // 强制设置位置，避免被其他物理体卡住
-            const targetX = p.x + p.velocityX * dt * 10;
-            const targetY = p.y + p.velocityY * dt * 10;
+            const targetX = p.x + p.velocityX * dt * 60;
+            const targetY = p.y + p.velocityY * dt * 60;
             if (len > 0) {
                 Core.setPosition(p.body, { x: targetX, y: targetY });
             }
             p.x = p.body.position.x; p.y = p.body.position.y;
         }
         p.x = Math.max(50, Math.min(2950, p.x)); p.y = Math.max(50, Math.min(1950, p.y));
-        if (len > 0) p.stamina = Math.max(0, p.stamina - dt * 2); else p.stamina = Math.min(p.maxStamina, p.stamina + dt * 5);
+        if (len > 0) p.stamina = Math.max(0, p.stamina - dt); else p.stamina = Math.min(p.maxStamina, p.stamina + dt * 5);
         const spiritualBonus = SpiritualSystem.getSpiritualLevel(p.x, p.y);
         p.spiritualPower = Math.min(p.maxSpiritualPower, p.spiritualPower + dt * spiritualBonus.bonus);
         p.mana = Math.min(p.maxMana, p.mana + dt * 2);
