@@ -62,7 +62,7 @@ const SurvivalSystem = {
                     
                 case 'cold':
                     // 感冒：降低体力恢复和移动速度
-                    player.speed = 2;
+                    player.speed = player.baseSpeed * 0.67;
                     break;
                     
                 case 'spiritual_imbalance':
@@ -238,12 +238,10 @@ const SurvivalSystem = {
     
     cure() {
         if (!this.isSick) return;
-        
         this.isSick = false;
         this.sickType = null;
         this.sickTimer = 0;
-        
-        GameState.player.speed = 3;
+        GameState.player.speed = GameState.player.baseSpeed || 3;
         Game.showMessage('疾病已痊愈', 'success');
     },
     

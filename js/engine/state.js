@@ -116,6 +116,9 @@ const GameState = {
     
     updatePlayer(dt) {
         const p = this.player;
+        // 速度保护：确保速度不会低于baseSpeed的30%
+        const minSpeed = (p.baseSpeed || 3) * 0.3;
+        if (p.speed < minSpeed) p.speed = p.baseSpeed || 3;
         let vx = 0, vy = 0;
         if (p.moveUp) vy -= 1; if (p.moveDown) vy += 1; if (p.moveLeft) vx -= 1; if (p.moveRight) vx += 1;
         const len = Math.hypot(vx, vy);
@@ -164,9 +167,9 @@ const GameState = {
             e.duration -= dt;
             if (e.type === 'poison') entity.health -= e.power * dt;
             if (e.type === 'heal') entity.health = Math.min(entity.maxHealth, entity.health + e.power * dt);
-            if (e.type === 'boost_speed') entity.speed = 4;
+            if (e.type === 'boost_speed') entity.speed = (entity.baseSpeed || 3) * 1.33;
             if (e.type === 'immune_boost') entity.immunity = Math.min(entity.maxImmunity, entity.immunity + e.power * dt);
-            if (e.duration <= 0) { if (e.type === 'boost_speed') entity.speed = 3; return false; }
+            if (e.duration <= 0) { if (e.type === 'boost_speed') entity.speed = entity.baseSpeed || 3; return false; }
             return true;
         });
     },

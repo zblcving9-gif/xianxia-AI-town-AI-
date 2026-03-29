@@ -1,12 +1,13 @@
-# 修仙AI小镇 - 文件依赖关系矩阵 v7
+# 修仙AI小镇 - 文件依赖关系矩阵 v6
 
 ## 版本信息
-- **版本号**: v7
+- **版本号**: v6
 - **更新日期**: 2024年迭代版本
 - **变更说明**: 
-  - 修复玩家速度系统冲突问题
-  - 统一使用baseSpeed替代硬编码速度值
-  - 添加速度下限保护机制
+  - 新增门派功法系统（24个门派功法）
+  - 新增快捷栏系统（按键1/2/3）
+  - 新增功法投射物和特效系统
+  - 功法攻击朝鼠标方向发射
 
 ## 项目文件列表
 
@@ -15,7 +16,7 @@
 | 1 | `index.html` | 根节点 | 886 | 主入口文件 |
 | 2 | `js/engine/core.js` | 二级节点 | 245 | 物理引擎核心 |
 | 3 | `js/engine/renderer.js` | 二级节点 | 391 | 渲染系统 |
-| 4 | `js/engine/state.js` | 二级节点 | 292 | 游戏状态管理 |
+| 4 | `js/engine/state.js` | 二级节点 | 289 | 游戏状态管理 |
 | 5 | `js/systems/building.js` | 二级节点 | 251 | 建造系统 |
 | 6 | `js/systems/resource.js` | 二级节点 | 161 | 资源采集 |
 | 7 | `js/systems/combat.js` | 二级节点 | 127 | 战斗系统 |
@@ -25,7 +26,7 @@
 | 11 | `js/systems/cultivation.js` | 二级节点 | 249 | 修炼系统 |
 | 12 | `js/systems/crafting.js` | 二级节点 | 286 | 合成系统 |
 | 13 | `js/systems/social.js` | 二级节点 | 251 | NPC社交 |
-| 14 | `js/systems/survival.js` | 二级节点 | 286 | 生存系统 |
+| 14 | `js/systems/survival.js` | 二级节点 | 287 | 生存系统 |
 | 15 | `js/systems/spiritual.js` | 二级节点 | 207 | 灵力系统 |
 | 16 | `js/systems/technique.js` | 二级节点 | 123 | 功法快捷栏 |
 
@@ -67,5 +68,16 @@
 | `GameState` | state.js | 所有系统 |
 | `GameData` | state.js | technique.js, crafting.js等 |
 | `QuickBarSystem` | technique.js | index.html |
-| `CombatSystem` | combat.js | technique.js, state.js |
+| `CombatSystem` | combat.js | technique.js |
 | ... | ... | ... |
+
+---
+
+## 门派功法体系
+
+| 门派 | 特色 | 功法数量 | 代表功法 |
+|------|------|----------|----------|
+| 青云门 | 雷法 | 6 | 青云雷法、雷暴术、天雷寂灭 |
+| 药王谷 | 治疗/毒 | 6 | 回春术、毒雾术、不死金身 |
+| 天音宗 | 音波/控制 | 6 | 音波功、定魂音、摄魂魔音 |
+| 万剑宗 | 剑气 | 6 | 剑气斩、万剑归宗、剑神降临 |
