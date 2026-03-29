@@ -21,7 +21,7 @@ const GameState = {
             spiritualPower: 50, maxSpiritualPower: 100, cultivation: 0, cultivationLevel: 1, cultivationRealm: '练气一层', cultivationSpeed: 1,
             attack: 10, defense: 5, attackSpeed: 1, attackRange: 80,
             faction: null, factionRank: 0,
-            moveUp: false, moveDown: false, moveLeft: false, moveRight: false, speed: 5, baseSpeed: 5, velocityX: 0, velocityY: 0,
+            moveUp: false, moveDown: false, moveLeft: false, moveRight: false, speed: 8, baseSpeed: 8, velocityX: 0, velocityY: 0,
             inventory: new Array(20).fill(null), inventorySize: 20, gold: 100,
             skills: [], techniques: [], effects: [], isPlayer: true
         };
@@ -123,24 +123,20 @@ const GameState = {
     
     updatePlayer(dt) {
         const p = this.player;
-        // 速度保护：确保速度不会低于baseSpeed的50%
-        const minSpeed = (p.baseSpeed || 5) * 0.5;
-        if (p.speed < minSpeed) p.speed = p.baseSpeed || 5;
+        // 恒定速度，不受任何因素影响
+        const MOVE_SPEED = 8;
         let vx = 0, vy = 0;
         if (p.moveUp) vy -= 1; if (p.moveDown) vy += 1; if (p.moveLeft) vx -= 1; if (p.moveRight) vx += 1;
         const len = Math.hypot(vx, vy);
         if (len > 0) { vx /= len; vy /= len; }
-        // 速度不再受体力影响，保持流畅移动
-        const speed = p.speed;
-        p.velocityX = vx * speed; p.velocityY = vy * speed;
-        if (p.body) {
-            Core.setVelocity(p.body, { x: p.velocityX, y: p.velocityY });
-            // 强制设置位置，避免被其他物理体卡住
-            const targetX = p.x + p.velocityX * dt * 60;
-            const targetY = p.y + p.velocityY * dt * 60;
-            if (len > 0) {
-                Core.setPosition(p.body, { x: targetX, y: targetY });
-            }
+        // 直接计算新位置，恒定速度
+        const moveX = vx * MOVE_SPEED;
+        const moveY = vy * MOVE_SPEED;
+        p.velocityX = moveX; p.velocityY = moveY;
+        if (p.body && len > 0) {
+            const newX = p.x + moveX;
+            const newY = p.y + moveY;
+            Core.setPosition(p.body, { x: newX, y: newY });
             p.x = p.body.position.x; p.y = p.body.position.y;
         }
         p.x = Math.max(50, Math.min(2950, p.x)); p.y = Math.max(50, Math.min(1950, p.y));
@@ -184,10 +180,9 @@ const GameState = {
             e.duration -= dt;
             if (e.type === 'poison') entity.health -= e.power * dt;
             if (e.type === 'heal') entity.health = Math.min(entity.maxHealth, entity.health + e.power * dt);
-            if (e.type === 'boost_speed') entity.speed = (entity.baseSpeed || 3) * 1.33;
+            // boost_speed不再修改速度，改为显示特效
             if (e.type === 'immune_boost') entity.immunity = Math.min(entity.maxImmunity, entity.immunity + e.power * dt);
-            if (e.duration <= 0) { if (e.type === 'boost_speed') entity.speed = entity.baseSpeed || 3; return false; }
-            return true;
+            return e.duration > 0;
         });
     },
     

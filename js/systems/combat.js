@@ -119,9 +119,7 @@ const CombatSystem = {
     },
     
     movementSkill(skill) {
-        const baseSpeed = GameState.player.baseSpeed || 5;
-        GameState.player.speed = baseSpeed * 2;
-        setTimeout(() => GameState.player.speed = baseSpeed, 3000);
-        Game.showMessage(`移动速度提升！`);
+        // 速度恒定，不再动态修改
+        Game.showMessage(`轻功施展！`);
     }
 };

@@ -51,7 +51,7 @@ const SurvivalSystem = {
         if (this.isSick) {
             this.sickTimer -= dt;
             
-            // 疾病效果
+            // 疾病效果（不影响移动速度）
             switch(this.sickType) {
                 case 'food_poisoning':
                     // 食物中毒：持续掉血和体力
@@ -61,8 +61,7 @@ const SurvivalSystem = {
                     break;
                     
                 case 'cold':
-                    // 感冒：降低体力恢复和移动速度
-                    player.speed = player.baseSpeed * 0.67;
+                    // 感冒：降低体力恢复（不影响移动速度）
                     break;
                     
                 case 'spiritual_imbalance':
@@ -74,12 +73,6 @@ const SurvivalSystem = {
             // 疾病自然恢复
             if (this.sickTimer <= 0 || player.immunity >= 80) {
                 this.cure();
-            }
-        } else {
-            // 恢复正常速度
-            const baseSpeed = GameState.player.baseSpeed || 5;
-            if (player.speed !== baseSpeed && !player.speedBoosted) {
-                player.speed = baseSpeed;
             }
         }
     },
@@ -241,7 +234,6 @@ const SurvivalSystem = {
         this.isSick = false;
         this.sickType = null;
         this.sickTimer = 0;
-        GameState.player.speed = GameState.player.baseSpeed || 5;
         Game.showMessage('疾病已痊愈', 'success');
     },
     
