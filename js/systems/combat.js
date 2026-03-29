@@ -57,11 +57,10 @@ const CombatSystem = {
     onDeath(target, killer) {
         this.getDropLoot(target).forEach(item => GameState.dropItem(target.x, target.y, item));
         if (killer?.isPlayer) { killer.cultivation += this.getExpReward(target); Game.showMessage('击杀成功！', 'success'); }
-        if (target.isNPC) {
-            if (target.body) Core.removeBody(target.body);
-            const idx = GameState.npcs.indexOf(target);
-            if (idx !== -1) GameState.npcs.splice(idx, 1);
-        }
+        // 移除NPC或怪物
+        if (target.body) Core.removeBody(target.body);
+        const idx = GameState.npcs.indexOf(target);
+        if (idx !== -1) GameState.npcs.splice(idx, 1);
     },
     
     getDropLoot(target) {
@@ -120,8 +119,9 @@ const CombatSystem = {
     },
     
     movementSkill(skill) {
-        GameState.player.speed = 6;
-        setTimeout(() => GameState.player.speed = 3, 3000);
+        const baseSpeed = GameState.player.baseSpeed || 3;
+        GameState.player.speed = baseSpeed * 2;
+        setTimeout(() => GameState.player.speed = baseSpeed, 3000);
         Game.showMessage(`移动速度提升！`);
     }
 };

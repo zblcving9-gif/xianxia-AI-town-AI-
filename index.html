@@ -688,6 +688,15 @@
                 let nearest = null;
                 let minDist = 100;
                 
+                // 检查掉落物品
+                for (const item of GameState.droppedItems) {
+                    const dist = Math.hypot(item.x - player.x, item.y - player.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = item;
+                    }
+                }
+                
                 // 检查NPC
                 for (const npc of GameState.npcs) {
                     const dist = Math.hypot(npc.x - player.x, npc.y - player.y);
@@ -707,10 +716,18 @@
                 }
                 
                 if (nearest) {
-                    if (nearest.isNPC) {
+                    if (nearest.lifetime !== undefined) {
+                        // 是掉落物品
+                        if (GameState.addItem(player, nearest)) {
+                            Game.showMessage(`拾取了 ${nearest.name}`, 'success');
+                            const idx = GameState.droppedItems.indexOf(nearest);
+                            if (idx !== -1) GameState.droppedItems.splice(idx, 1);
+                        } else {
+                            Game.showMessage('物品栏已满', 'warning');
+                        }
+                    } else if (nearest.isNPC || nearest.isMonster) {
                         DialogSystem.startDialog(nearest);
                     } else if (nearest.amount !== undefined) {
-                        // 是资源（有amount属性）
                         ResourceSystem.gather(nearest);
                     }
                 } else {

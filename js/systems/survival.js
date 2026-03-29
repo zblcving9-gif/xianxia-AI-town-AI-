@@ -77,8 +77,9 @@ const SurvivalSystem = {
             }
         } else {
             // 恢复正常速度
-            if (player.speed < 3) {
-                player.speed = 3;
+            const baseSpeed = GameState.player.baseSpeed || 3;
+            if (player.speed !== baseSpeed && !player.speedBoosted) {
+                player.speed = baseSpeed;
             }
         }
     },

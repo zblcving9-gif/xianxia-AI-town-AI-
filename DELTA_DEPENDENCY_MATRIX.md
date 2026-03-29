@@ -1,8 +1,8 @@
-# 文件依赖增量矩阵 - v4
+# 文件依赖增量矩阵 - v5
 
 ## 版本变更说明
 
-本次迭代为 **v3 → v4** 的增量变更
+本次迭代为 **v4 → v5** 的增量变更
 
 ---
 
@@ -10,73 +10,55 @@
 
 | 文件 | 修改行数 | 修改内容 |
 |------|----------|----------|
-| `js/engine/state.js` | ~95行 | NPC/怪物完整属性+随机好感度 |
-| `js/engine/renderer.js` | ~20行 | 怪物渲染样式 |
+| `js/systems/combat.js` | ~8行 | 修复怪物死亡不消失、速度恢复逻辑 |
+| `js/systems/survival.js` | ~5行 | 修复速度恢复逻辑 |
+| `js/engine/state.js` | ~1行 | 添加baseSpeed属性 |
+| `index.html` | ~30行 | 添加拾取物品功能 |
 
 ---
 
-## 新增功能详情
+## Bug修复详情
 
-### 1. NPC/怪物完整属性
+### Bug 1: NPC/怪物死亡不消失
+**原因**: `onDeath` 只检查 `target.isNPC`，怪物是 `isMonster: true` 且 `isNPC: false`
+**修复**: 移除 `if (target.isNPC)` 条件，直接移除所有目标
 
-**新增属性列表**：
+### Bug 2: 无法拾取地面物品
+**原因**: 没有拾取掉落物品的逻辑
+**修复**: 在 `interact()` 中添加对 `droppedItems` 的检查和拾取
 
-| 属性类型 | 新增属性 |
-|----------|----------|
-| 能量系统 | mana, stamina, hunger, immunity, spiritualPower |
-| 修仙系统 | cultivation, cultivationLevel, cultivationRealm, cultivationSpeed |
-| 物品系统 | inventory, gold, techniques |
-| 战斗系统 | attackSpeed, attackRange, defense |
-
-### 2. 怪物系统
-
-**创建内容**：
-- 5只妖兽怪物
-- 随机分布在地图中
-- 独特外观（棕色身体+红眼）
-- 更高的攻击力和速度
-
-### 3. 好感度随机化
-
-```
-relationship: Math.floor(Math.random() * 201) - 100
-// 范围：-100 到 +100
-```
-
-**好感度分布**：
-| 好感度范围 | 态度 | 行为 |
-|------------|------|------|
-| -100 ~ -50 | 敌对 | 主动攻击玩家 |
-| -49 ~ -20 | 冷淡 | 不愿交流 |
-| -19 ~ 20 | 中立 | 正常交互 |
-| 21 ~ 50 | 友善 | 热情回应 |
-| 51 ~ 100 | 挚友 | 任务奖励加成 |
+### Bug 3: 玩家速度变慢
+**原因**: `movementSkill` 和 `updateSickness` 使用硬编码速度值，互相冲突
+**修复**: 
+- 添加 `baseSpeed` 属性
+- 速度技能使用 `baseSpeed * 2`
+- 恢复时使用 `baseSpeed`
 
 ---
 
-## 代码变更详情
+## 代码变更对比
 
-### state.js 新增 createEntity 方法
+### combat.js
+```
+原: if (target.isNPC) { ... removeBody ... splice ... }
+新: // 直接移除，不区分NPC/怪物
+    if (target.body) Core.removeBody(target.body);
+    const idx = GameState.npcs.indexOf(target);
+    if (idx !== -1) GameState.npcs.splice(idx, 1);
 
-```javascript
-createEntity(name, x, y, type, factionName, id, isMonster) {
-    // 创建拥有完整属性的NPC或怪物
-}
+原: player.speed = 6; setTimeout(() => player.speed = 3, 3000);
+新: player.speed = baseSpeed * 2; setTimeout(() => player.speed = baseSpeed, 3000);
 ```
 
-### renderer.js 怪物渲染
-
-```javascript
-if (npc.isMonster) {
-    // 怪物特殊渲染：棕色身体、红色眼睛
-}
+### index.html
 ```
-
----
-
-## 增量矩阵
-
-**v3 → v4 变化矩阵:** 无依赖变化
+新增: 检查 droppedItems 并拾取
+      if (nearest.lifetime !== undefined) {
+          // 拾取掉落物品
+          GameState.addItem(player, nearest);
+          GameState.droppedItems.splice(idx, 1);
+      }
+```
 
 ---
 
@@ -84,6 +66,5 @@ if (npc.isMonster) {
 
 | 规则 | 状态 | 说明 |
 |------|------|------|
-| 根节点修改≤50行 | ✅ | 根节点未修改 |
-| 二级节点修改≤100行 | ✅ | state.js ~95行, renderer.js ~20行 |
-| 文件总行数≤400行 | ✅ | state.js 240行, renderer.js 312行 |
+| 根节点修改≤50行 | ✅ | index.html ~30行 |
+| 二级节点修改≤100行 | ✅ | combat.js ~8行, survival.js ~5行, state.js ~1行 |
