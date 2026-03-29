@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修仙AI小镇</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #1a1a2e; 
+            overflow: hidden; 
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        #gameContainer { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh; 
+        }
+        #gameCanvas { 
+            display: block; 
+            background: linear-gradient(180deg, #0f0f23 0%, #1a1a3e 100%);
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #e0e0e0;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        #ui > * { pointer-events: auto; }
+        
+        /* 状态面板 */
+        #statusPanel {
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 200px;
+            margin-bottom: 10px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .stat-bar {
+            width: 100px;
+            height: 12px;
+            background: #2a2a4a;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .stat-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        .health-fill { background: linear-gradient(90deg, #ff4444, #ff6666); }
+        .mana-fill { background: linear-gradient(90deg, #4444ff, #6666ff); }
+        .stamina-fill { background: linear-gradient(90deg, #44ff44, #66ff66); }
+        .immunity-fill { background: linear-gradient(90deg, #ffaa44, #ffcc66); }
+        .spiritual-fill { background: linear-gradient(90deg, #aa44ff, #cc66ff); }
+        
+        /* 天气面板 */
+        #weatherPanel {
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        
+        /* 功能面板 */
+        #actionPanel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 40, 0.95);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 15px;
+            max-width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .panel-title {
+            color: #aaaaff;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #4a4a8a;
+            padding-bottom: 5px;
+        }
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: linear-gradient(180deg, #3a3a6a, #2a2a4a);
+            border: 1px solid #5a5a9a;
+            border-radius: 5px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            background: linear-gradient(180deg, #4a4a8a, #3a3a6a);
+            border-color: #7a7aba;
+        }
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 对话框 */
+        #dialogBox {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 600px;
+            background: rgba(20, 20, 40, 0.95);
+            border: 2px solid #6a6aaa;
+            border-radius: 10px;
+            padding: 20px;
+            display: none;
+        }
+        #dialogBox.show { display: block; }
+        #dialogSpeaker {
+            color: #aaffaa;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #dialogContent {
+            color: #e0e0e0;
+            line-height: 1.6;
+            min-height: 60px;
+        }
+        #dialogOptions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .dialog-option {
+            padding: 8px 16px;
+            background: #3a3a6a;
+            border: 1px solid #5a5a9a;
+            border-radius: 5px;
+            color: #e0e0e0;
+            cursor: pointer;
+        }
+        .dialog-option:hover {
+            background: #4a4a8a;
+        }
+        
+        /* 消息提示 */
+        #messageBox {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+        .message {
+            background: rgba(20, 20, 40, 0.9);
+            color: #ffff88;
+            padding: 8px 16px;
+            border-radius: 5px;
+            margin: 5px;
+            animation: fadeUp 3s forwards;
+        }
+        @keyframes fadeUp {
+            0% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        /* 物品栏 */
+        #inventoryPanel {
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+        }
+        .inventory-slot {
+            width: 40px;
+            height: 40px;
+            background: #2a2a4a;
+            border: 1px solid #4a4a6a;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #aaa;
+            position: relative;
+        }
+        .inventory-slot.has-item {
+            background: #3a3a5a;
+            border-color: #6a6a9a;
+        }
+        .item-count {
+            position: absolute;
+            bottom: 1px;
+            right: 3px;
+            font-size: 10px;
+            color: #fff;
+        }
+        
+        /* 门派面板 */
+        #factionPanel {
+            display: none;
+            background: rgba(20, 20, 40, 0.95);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 15px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 400px;
+            z-index: 100;
+        }
+        #factionPanel.show { display: block; }
+        
+        /* 修炼面板 */
+        #cultivationPanel {
+            display: none;
+            background: rgba(20, 20, 40, 0.95);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 15px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 350px;
+            z-index: 100;
+        }
+        #cultivationPanel.show { display: block; }
+        
+        /* 合成面板 */
+        #craftingPanel {
+            display: none;
+            background: rgba(20, 20, 40, 0.95);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 15px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 400px;
+            z-index: 100;
+        }
+        #craftingPanel.show { display: block; }
+        
+        /* 小地图 */
+        #minimap {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+        }
+        #minimapCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+        
+        /* 灵力显示 */
+        #spiritualInfo {
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui">
+            <div id="statusPanel">
+                <div class="panel-title">角色状态</div>
+                <div class="stat-row">
+                    <span>生命:</span>
+                    <div class="stat-bar"><div class="stat-fill health-fill" id="healthBar"></div></div>
+                    <span id="healthText">100/100</span>
+                </div>
+                <div class="stat-row">
+                    <span>灵力:</span>
+                    <div class="stat-bar"><div class="stat-fill mana-fill" id="manaBar"></div></div>
+                    <span id="manaText">100/100</span>
+                </div>
+                <div class="stat-row">
+                    <span>体力:</span>
+                    <div class="stat-bar"><div class="stat-fill stamina-fill" id="staminaBar"></div></div>
+                    <span id="staminaText">100/100</span>
+                </div>
+                <div class="stat-row">
+                    <span>免疫:</span>
+                    <div class="stat-bar"><div class="stat-fill immunity-fill" id="immunityBar"></div></div>
+                    <span id="immunityText">100/100</span>
+                </div>
+                <div class="stat-row">
+                    <span>修为:</span>
+                    <span id="cultivationText">练气一层</span>
+                </div>
+            </div>
+            
+            <div id="weatherPanel">
+                <span id="weatherInfo">晴朗 ☀️ 温度: 25°C</span>
+            </div>
+            
+            <div id="spiritualInfo">
+                <div>当前位置灵力浓度: <span id="spiritualLevel">稀薄</span></div>
+                <div>修炼加成: <span id="cultivationBonus">1.0x</span></div>
+            </div>
+            
+            <div id="inventoryPanel">
+                <div class="panel-title">物品栏</div>
+                <div class="inventory-grid" id="inventoryGrid"></div>
+            </div>
+        </div>
+        
+        <div id="actionPanel">
+            <div class="panel-title">操作菜单</div>
+            <button class="action-btn" onclick="GameActions.build()">建造 (B)</button>
+            <button class="action-btn" onclick="GameActions.craft()">合成 (C)</button>
+            <button class="action-btn" onclick="GameActions.cultivate()">修炼 (X)</button>
+            <button class="action-btn" onclick="GameActions.faction()">门派 (F)</button>
+            <button class="action-btn" onclick="GameActions.attack()">攻击 (空格)</button>
+            <button class="action-btn" onclick="GameActions.interact()">交互 (E)</button>
+            <button class="action-btn" onclick="GameActions.eat()">进食 (G)</button>
+            <button class="action-btn" onclick="GameActions.cook()">烹饪 (R)</button>
+        </div>
+        
+        <div id="dialogBox">
+            <div id="dialogSpeaker"></div>
+            <div id="dialogContent"></div>
+            <div id="dialogOptions"></div>
+        </div>
+        
+        <div id="messageBox"></div>
+        
+        <div id="factionPanel">
+            <div class="panel-title">门派系统</div>
+            <div id="factionContent"></div>
+            <button class="action-btn" onclick="GameActions.closeFaction()">关闭</button>
+        </div>
+        
+        <div id="cultivationPanel">
+            <div class="panel-title">功法修炼</div>
+            <div id="cultivationContent"></div>
+            <button class="action-btn" onclick="GameActions.closeCultivation()">关闭</button>
+        </div>
+        
+        <div id="craftingPanel">
+            <div class="panel-title">合成系统</div>
+            <div id="craftingContent"></div>
+            <button class="action-btn" onclick="GameActions.closeCrafting()">关闭</button>
+        </div>
+        
+        <div id="minimap">
+            <canvas id="minimapCanvas"></canvas>
+        </div>
+    </div>
+    
+    <!-- 核心引擎模块 -->
+    <script src="js/engine/core.js"></script>
+    <script src="js/engine/renderer.js"></script>
+    <script src="js/engine/state.js"></script>
+    
+    <!-- 游戏系统模块 -->
+    <script src="js/systems/building.js"></script>
+    <script src="js/systems/resource.js"></script>
+    <script src="js/systems/combat.js"></script>
+    <script src="js/systems/faction.js"></script>
+    <script src="js/systems/weather.js"></script>
+    <script src="js/systems/dialog.js"></script>
+    <script src="js/systems/cultivation.js"></script>
+    <script src="js/systems/crafting.js"></script>
+    <script src="js/systems/social.js"></script>
+    <script src="js/systems/survival.js"></script>
+    <script src="js/systems/spiritual.js"></script>
+    
+    <!-- 主游戏逻辑 -->
+    <script>
+        // 游戏主控制器
+        const Game = {
+            canvas: null,
+            ctx: null,
+            lastTime: 0,
+            deltaTime: 0,
+            
+            init() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                // 初始化核心引擎
+                Core.init(this.canvas);
+                Renderer.init(this.ctx, this.canvas);
+                GameState.init();
+                
+                // 初始化所有系统
+                WeatherSystem.init();
+                SpiritualSystem.init();
+                BuildingSystem.init();
+                ResourceSystem.init();
+                CombatSystem.init();
+                FactionSystem.init();
+                DialogSystem.init();
+                CultivationSystem.init();
+                CraftingSystem.init();
+                SocialSystem.init();
+                SurvivalSystem.init();
+                
+                // 绑定输入
+                this.bindInput();
+                
+                // 开始游戏循环
+                this.lastTime = performance.now();
+                requestAnimationFrame((t) => this.gameLoop(t));
+                
+                this.showMessage('欢迎来到修仙AI小镇！按E键与NPC交互，B键建造。');
+            },
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                if (Renderer.camera) {
+                    Renderer.camera.width = this.canvas.width;
+                    Renderer.camera.height = this.canvas.height;
+                }
+            },
+            
+            gameLoop(currentTime) {
+                this.deltaTime = (currentTime - this.lastTime) / 1000;
+                this.lastTime = currentTime;
+                
+                // 限制deltaTime防止跳帧
+                this.deltaTime = Math.min(this.deltaTime, 0.1);
+                
+                this.update(this.deltaTime);
+                this.render();
+                
+                requestAnimationFrame((t) => this.gameLoop(t));
+            },
+            
+            update(dt) {
+                // 更新物理引擎
+                Core.update(dt);
+                
+                // 更新游戏状态
+                GameState.update(dt);
+                
+                // 更新各系统
+                WeatherSystem.update(dt);
+                SpiritualSystem.update(dt);
+                BuildingSystem.update(dt);
+                ResourceSystem.update(dt);
+                CombatSystem.update(dt);
+                FactionSystem.update(dt);
+                DialogSystem.update(dt);
+                CultivationSystem.update(dt);
+                CraftingSystem.update(dt);
+                SocialSystem.update(dt);
+                SurvivalSystem.update(dt);
+                
+                // 更新UI
+                this.updateUI();
+            },
+            
+            render() {
+                Renderer.clear();
+                Renderer.render(GameState);
+            },
+            
+            updateUI() {
+                const player = GameState.player;
+                
+                // 更新状态条
+                document.getElementById('healthBar').style.width = (player.health / player.maxHealth * 100) + '%';
+                document.getElementById('healthText').textContent = `${Math.floor(player.health)}/${player.maxHealth}`;
+                
+                document.getElementById('manaBar').style.width = (player.mana / player.maxMana * 100) + '%';
+                document.getElementById('manaText').textContent = `${Math.floor(player.mana)}/${player.maxMana}`;
+                
+                document.getElementById('staminaBar').style.width = (player.stamina / player.maxStamina * 100) + '%';
+                document.getElementById('staminaText').textContent = `${Math.floor(player.stamina)}/${player.maxStamina}`;
+                
+                document.getElementById('immunityBar').style.width = (player.immunity / player.maxImmunity * 100) + '%';
+                document.getElementById('immunityText').textContent = `${Math.floor(player.immunity)}/${player.maxImmunity}`;
+                
+                // 更新修为
+                document.getElementById('cultivationText').textContent = player.cultivationRealm;
+                
+                // 更新天气
+                document.getElementById('weatherInfo').textContent = 
+                    `${WeatherSystem.weatherName} ${WeatherSystem.weatherIcon} 温度: ${WeatherSystem.temperature}°C`;
+                
+                // 更新灵力信息
+                const spiritualLevel = SpiritualSystem.getSpiritualLevel(player.x, player.y);
+                document.getElementById('spiritualLevel').textContent = spiritualLevel.name;
+                document.getElementById('cultivationBonus').textContent = spiritualLevel.bonus.toFixed(1) + 'x';
+                
+                // 更新物品栏
+                this.updateInventory();
+            },
+            
+            updateInventory() {
+                const grid = document.getElementById('inventoryGrid');
+                const inventory = GameState.player.inventory;
+                
+                grid.innerHTML = '';
+                for (let i = 0; i < 20; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'inventory-slot';
+                    
+                    if (inventory[i]) {
+                        slot.classList.add('has-item');
+                        slot.innerHTML = `${inventory[i].icon}<span class="item-count">${inventory[i].count}</span>`;
+                        slot.title = `${inventory[i].name}: ${inventory[i].description}`;
+                        slot.onclick = () => GameActions.useItem(i);
+                    }
+                    
+                    grid.appendChild(slot);
+                }
+            },
+            
+            bindInput() {
+                document.addEventListener('keydown', (e) => {
+                    const player = GameState.player;
+                    
+                    switch(e.key.toLowerCase()) {
+                        case 'w':
+                        case 'arrowup':
+                            player.moveUp = true;
+                            break;
+                        case 's':
+                        case 'arrowdown':
+                            player.moveDown = true;
+                            break;
+                        case 'a':
+                        case 'arrowleft':
+                            player.moveLeft = true;
+                            break;
+                        case 'd':
+                        case 'arrowright':
+                            player.moveRight = true;
+                            break;
+                        case ' ':
+                            e.preventDefault();
+                            CombatSystem.playerAttack();
+                            break;
+                        case 'e':
+                            GameActions.interact();
+                            break;
+                        case 'b':
+                            GameActions.build();
+                            break;
+                        case 'c':
+                            GameActions.craft();
+                            break;
+                        case 'x':
+                            GameActions.cultivate();
+                            break;
+                        case 'f':
+                            GameActions.faction();
+                            break;
+                        case 'g':
+                            GameActions.eat();
+                            break;
+                        case 'r':
+                            GameActions.cook();
+                            break;
+                        case 'escape':
+                            GameActions.closeAllPanels();
+                            break;
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    const player = GameState.player;
+                    
+                    switch(e.key.toLowerCase()) {
+                        case 'w':
+                        case 'arrowup':
+                            player.moveUp = false;
+                            break;
+                        case 's':
+                        case 'arrowdown':
+                            player.moveDown = false;
+                            break;
+                        case 'a':
+                        case 'arrowleft':
+                            player.moveLeft = false;
+                            break;
+                        case 'd':
+                        case 'arrowright':
+                            player.moveRight = false;
+                            break;
+                    }
+                });
+                
+                // 鼠标点击
+                this.canvas.addEventListener('click', (e) => {
+                    const worldPos = Renderer.screenToWorld(e.clientX, e.clientY);
+                    GameActions.handleClick(worldPos.x, worldPos.y);
+                });
+                
+                // 鼠标移动
+                this.canvas.addEventListener('mousemove', (e) => {
+                    const worldPos = Renderer.screenToWorld(e.clientX, e.clientY);
+                    GameState.mouseX = worldPos.x;
+                    GameState.mouseY = worldPos.y;
+                });
+            },
+            
+            showMessage(text, type = 'info') {
+                const box = document.getElementById('messageBox');
+                const msg = document.createElement('div');
+                msg.className = 'message';
+                msg.textContent = text;
+                
+                if (type === 'success') msg.style.color = '#88ff88';
+                else if (type === 'warning') msg.style.color = '#ffaa44';
+                else if (type === 'danger') msg.style.color = '#ff4444';
+                
+                box.appendChild(msg);
+                setTimeout(() => msg.remove(), 3000);
+            }
+        };
+        
+        // 游戏操作
+        const GameActions = {
+            build() {
+                if (BuildingSystem.isBuilding) {
+                    BuildingSystem.cancelBuild();
+                } else {
+                    BuildingSystem.startBuild();
+                    Game.showMessage('进入建造模式，点击放置建筑，ESC取消');
+                }
+            },
+            
+            craft() {
+                CraftingSystem.togglePanel();
+            },
+            
+            cultivate() {
+                CultivationSystem.togglePanel();
+            },
+            
+            faction() {
+                FactionSystem.togglePanel();
+            },
+            
+            attack() {
+                CombatSystem.playerAttack();
+            },
+            
+            interact() {
+                const player = GameState.player;
+                let nearest = null;
+                let minDist = 100;
+                
+                // 检查NPC
+                for (const npc of GameState.npcs) {
+                    const dist = Math.hypot(npc.x - player.x, npc.y - player.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = npc;
+                    }
+                }
+                
+                // 检查资源
+                for (const res of GameState.resources) {
+                    const dist = Math.hypot(res.x - player.x, res.y - player.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = res;
+                    }
+                }
+                
+                if (nearest) {
+                    if (nearest.isNPC) {
+                        DialogSystem.startDialog(nearest);
+                    } else if (nearest.type === 'resource') {
+                        ResourceSystem.gather(nearest);
+                    }
+                } else {
+                    Game.showMessage('附近没有可交互的对象', 'warning');
+                }
+            },
+            
+            eat() {
+                SurvivalSystem.eat();
+            },
+            
+            cook() {
+                SurvivalSystem.cook();
+            },
+            
+            useItem(index) {
+                const item = GameState.player.inventory[index];
+                if (item) {
+                    if (item.type === 'food') {
+                        SurvivalSystem.eatItem(item, index);
+                    } else if (item.type === 'medicine') {
+                        SurvivalSystem.useMedicine(item, index);
+                    } else if (item.type === 'material') {
+                        Game.showMessage(`${item.name}是合成材料，无法直接使用`);
+                    }
+                }
+            },
+            
+            handleClick(worldX, worldY) {
+                if (BuildingSystem.isBuilding) {
+                    BuildingSystem.placeBuild(worldX, worldY);
+                }
+            },
+            
+            closeAllPanels() {
+                document.getElementById('factionPanel').classList.remove('show');
+                document.getElementById('cultivationPanel').classList.remove('show');
+                document.getElementById('craftingPanel').classList.remove('show');
+                document.getElementById('dialogBox').classList.remove('show');
+                BuildingSystem.cancelBuild();
+            },
+            
+            closeFaction() {
+                document.getElementById('factionPanel').classList.remove('show');
+            },
+            
+            closeCultivation() {
+                document.getElementById('cultivationPanel').classList.remove('show');
+            },
+            
+            closeCrafting() {
+                document.getElementById('craftingPanel').classList.remove('show');
+            }
+        };
+        
+        // 启动游戏
+        window.onload = () => Game.init();
+    </script>
+</body>
+</html>
